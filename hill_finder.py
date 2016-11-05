@@ -1,9 +1,11 @@
-import sys
 import random
 import subprocess
 from map_to_graph import map_to_graph
 import math
 import osmapi
+import os.path
+import pickle
+from numpy import linspace
 
 def get_elevations_by_coords(lats, lngs):
     queries = dict()
@@ -38,21 +40,34 @@ def get_node_entry(target_node):
     return (item for item in map_data 
             if item["data"]["id"] == target_node).__next__()
 
-def get_elevations_by_nodes(nodes):
+def get_coords_by_nodes(nodes):
     lats, lons = list(), list()
     for node in nodes:
         node_info = get_node_entry(node)
         lats.append( float(node_info['data']['lat']) )
         lons.append( float(node_info['data']['lon']) )
-    return get_elevations_by_coords(lats, lons)
+    return (lats, lons)
+
+def get_edge(node1, node2):
+    pass
+
+
 
 
 if __name__ == '__main__':
     api_link = osmapi.OsmApi()
 
-    print('requesting map...')
     try:
-        map_data = api_link.Map(-83.1,33.1, -83.05,33.15)
+        if os.path.exists('map.dat'):
+            print('loading local map...')
+            with open('map.dat', 'rb') as f:
+                map_data = pickle.load(f)
+        else:
+            print('requesting map...')
+            map_data = api_link.Map(-83.1,33.1, -83.05,33.15)
+            with open('map.dat', 'wb') as f:
+                pickle.dump(map_data, f)
+
     except: # osmapi.OsmApi.MaximumRetryLimitReachedError:  #TODO: handle errors
         print("Could not get map data!")
 
@@ -60,20 +75,66 @@ if __name__ == '__main__':
     graph = map_to_graph(map_data)
     print('graph completed with %d nodes' % (len(graph),))
 
-    print('finding node heights...')
-    node_heights = dict()
-    node_list = list(graph.keys())
-    elevations = get_elevations_by_nodes(node_list)
-    for i in range(len(node_list)):
-        node_heights[node_list[i]] = elevations[i]
+    # print('finding node heights...')
+    # node_heights = dict()
+    # node_list = list(graph.keys())
+    # lats, lons = get_coords_by_nodes(node_list)
+    # elevations = get_elevations_by_nodes(lats, lons)
+    # for i in range(len(node_list)):
+    #     node_heights[node_list[i]] = elevations[i]
 
-    print('identifying local maxima...')
-    local_maxima = set()
-    for node in graph.keys():
-        if node_heights[node] > max(node_heights[n] for n in graph[node]):
-            local_maxima.add(node)
+    print('building node coordinate list...')
+    node_lats, node_lons = dict(), dict()
+    nodes = list(graph.keys())
+    lats, lons = get_coords_by_nodes(nodes)
+    for i in range(len(nodes)):
+        node_lats[nodes[i]] = lats[i]
+        node_lons[nodes[i]] = lons[i]
 
-    print(len(local_maxima))
+
+    print('scanning edges...')
+    datapts_per_degree = 10800
+    unscanned = [(k,v) for k,vlist in graph.items() for v in vlist]
+    edges = dict()
+
+    superquery_lats = []
+    superquery_lons = []
+    superquery_keys = []
+    for src, dst in unscanned:
+        measures_lat = int(abs(node_lats[src]-node_lats[dst]) * datapts_per_degree)
+        measures_lon = int(abs(node_lons[src]-node_lons[dst]) * datapts_per_degree)
+        n_steps = max(measures_lat, measures_lon)
+        #print(n_steps)
+
+        lat_steps = linspace(node_lats[src], node_lats[dst], 
+                             num=n_steps, endpoint=False)
+        lon_steps = linspace(node_lons[src], node_lons[dst], 
+                             num=n_steps, endpoint=False)
+
+        superquery_lats += lat_steps.tolist()
+        superquery_lons += lon_steps.tolist()
+        superquery_keys += [(src,dst)] * n_steps
+
+    #print(len(superquery_keys), len(superquery_lats), len(superquery_lons))
+    elevations = get_elevations_by_coords(superquery_lats, superquery_lons)
+    for i in range(len(elevations)):
+        if superquery_keys[i] in edges.keys():
+            edges[superquery_keys[i]].append(elevations[i])
+        else:
+            edges[superquery_keys[i]] = [elevations[i]]
+
+    for c in random.sample(list(edges.keys()), 20):
+        print(c, ['%.2f' % float(x) for x in edges[c]])
+
+
+
+    # print('identifying local maxima...')
+    # local_maxima = set()
+    # for node in graph.keys():
+    #     if node_heights[node] > max(node_heights[n] for n in graph[node]):
+    #         local_maxima.add(node)
+
+    # print(len(local_maxima))
 
 
 
