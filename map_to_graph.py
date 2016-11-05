@@ -1,11 +1,6 @@
-#import osmapi
 #import itertools
 
 def map_to_graph(map_data):
-    api_link = osmapi.OsmApi()
-
-    print('starting request')
-    map_data = api_link.Map(-83.1,33.1, -83.05,33.15)
 
     way_lists = list()
     way_sets = list()
@@ -56,7 +51,7 @@ def map_to_graph(map_data):
                     n2 = way_lists[w2].index(curWay[n])
                     graph_update(curWay,way_lists[w2], n,n2)
 
-    for node in graph.keys():
-        print(node, graph[node])
+    # for node in graph.keys():
+    #     print(node, graph[node])
 
     return graph
