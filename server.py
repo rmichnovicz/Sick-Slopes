@@ -28,8 +28,8 @@ class S(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self._set_headers()
-        f = open("index.html", "r")
-        self.wfile.write(bytes(f.read, "utf-8"))
+        f = open("index.htm", "r")
+        self.wfile.write(bytes(f.read(), "utf-8"))
 
     def do_HEAD(self):
         self._set_headers()
