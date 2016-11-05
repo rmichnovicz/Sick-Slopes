@@ -1,6 +1,17 @@
 from subprocess import check_output
 import sys
 import math
+from map2graph import map_to_graph
+
+api_link = osmapi.OsmApi()
+
+print('starting request')
+try:
+    map_data = api_link.Map(-83.1,33.1, -83.05,33.15)
+except: # osmapi.OsmApi.MaximumRetryLimitReachedError:  #TODO: handle errors
+    print("Could not get map data!")
+
+graph = map_to_graph(map_data)
 
 lat, lng = 33.373447, -84.7394
 
