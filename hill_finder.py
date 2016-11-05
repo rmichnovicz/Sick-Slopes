@@ -1,7 +1,7 @@
 from subprocess import check_output
 import sys
 import math
-from map2graph import map_to_graph
+from map_to_graph import map_to_graph
 
 api_link = osmapi.OsmApi()
 
