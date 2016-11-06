@@ -6,3 +6,5 @@ __pycache__/*
 *.sublime-workspace
 pins.txt
 map.dat
+map.osm
+lol.txt
