@@ -5,6 +5,6 @@ __pycache__/*
 *.sublime-project
 *.sublime-workspace
 pins.txt
-map.dat
-map.osm
 lol.txt
+map*.dat
+map.osm
