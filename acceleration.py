@@ -1,4 +1,4 @@
-def find_fianl_velocity(v0, dh, dist): # for small changes in V
+def find_final_velocity(v0, dh, dist): # for small changes in V
     g = 9.81 #accelertion due to gravity, m/s
     drag_c = .6 #drag coefficient of human body
     cross_a = .68 #Cross-sectional area of human body
