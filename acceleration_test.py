@@ -10,6 +10,6 @@ while lng < end_lng:
     elevation = hill_finder.get_elevations_by_coords([lat], [lng])[0]
     lng += 1/3600/3
     new_elevation = hill_finder.get_elevations_by_coords([lat], [lng])[0]
-    change = new_elevation - elevation
+    change = float(new_elevation) - float(elevation)
     v = acceleration.new_velocity(v, change, 10.29)
     print(v)

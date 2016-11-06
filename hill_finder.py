@@ -73,7 +73,7 @@ if __name__ == '__main__':
                              #api="api06.dev.openstreetmap.org"
                              )
 
-    mapsize = (-84.4040,33.7686, -84.3855,33.7816)
+    mapsize = (-84.39565,33.77372, -84.39067,33.77412)
     mapfilepath = 'map'+str(mapsize)+'.dat'
 
     try:
@@ -83,7 +83,8 @@ if __name__ == '__main__':
                 map_data = pickle.load(f)
         else:
             print('requesting map...')
-            map_data = api_link.Map(-83.1,33.1, -83.05,33.15)
+            map_data = api_link.Map(mapsize[0], mapsize[1], 
+                                    mapsize[2], mapsize[3])
             with open(mapfilepath, 'wb') as f:
                 pickle.dump(map_data, f)
 
@@ -94,6 +95,9 @@ if __name__ == '__main__':
     print('converting map to graph...')
     graph = map_to_graph(map_data)
     print('graph completed with %d nodes' % (len(graph),))
+    keys = list(graph.keys())
+    # for k in keys[50:70]:
+        #print(k, graph[k])
 
     print('finding node heights...')
     node_heights = dict()
@@ -121,6 +125,10 @@ if __name__ == '__main__':
     superquery_lons = []
     superquery_keys = []
     for src, dst in unscanned:
+        print((node_lats[src], node_lons[src],
+                           node_lats[dst], node_lons[dst]), latlong_dist(node_lats[src], node_lons[src],
+                           node_lats[dst], node_lons[dst]))
+
         measures_lat = int(abs(node_lats[src]-node_lats[dst]) * datapts_per_degree)
         measures_lon = int(abs(node_lons[src]-node_lons[dst]) * datapts_per_degree)
         n_steps = max(measures_lat, measures_lon, 2)
@@ -135,7 +143,7 @@ if __name__ == '__main__':
         superquery_lons += lon_steps.tolist()
         superquery_keys += [(src,dst)] * n_steps
 
-    #print(len(superquery_keys), len(superquery_lats), len(superquery_lons))
+    print(len(superquery_keys), len(superquery_lats), len(superquery_lons))
     elevations = get_elevations_by_coords(superquery_lats, superquery_lons)
     for i in range(len(elevations)):
         item = float(elevations[i])
@@ -174,6 +182,7 @@ if __name__ == '__main__':
 
     def find_all_paths(start, vel, path=[], max_vel=0):
         path.append(start)
+        print(path)
         
         if vel == 0:
             return [path], [max_vel]
@@ -184,7 +193,7 @@ if __name__ == '__main__':
             if neighbor not in path:
                 vel, max_vel = ride_down_node(start, neighbor, vel, max_vel)
                 new_paths, new_maxes = find_all_paths(neighbor, vel, path, max_vel)
-                paths += new_paths
+                for p in new_paths: paths.append(p)
                 max_vels += new_maxes
         return paths, max_vels
 
@@ -192,22 +201,26 @@ if __name__ == '__main__':
     print('descending...')
     paths = []
     max_vels = []
-    for i in range(100):
-        if len(maxima_by_elevation) == 0: break
-        origin = maxima_by_elevation.pop()
+    for origin in maxima_by_elevation:
         new_paths, new_maxes = find_all_paths(origin, 1.0)
         paths += new_paths
         max_vels += new_maxes
 
-    vels_and_paths = sorted(zip(max_vels, paths), reverse=True)
+    vels_and_paths = list(zip(max_vels, paths))
+    #print(vels_and_paths[0])
+    vels_and_paths = sorted(vels_and_paths, reverse=True)
     
     # for v, p in vels_and_paths[:5]:
     #     print('max vel', v, 'path', p)
 
-    v, p = vels_and_paths[0]
+    v, p = vels_and_paths[7]
     print("Best velocity:", v)
-    for node in p:
-        print(node_lats[node], node_lons[node])
+    with open('pins.txt', 'w') as trace_file:
+        for node in p:
+            lat = node_lats[node]
+            lon = node_lons[node]
+            write_string = str(lat) + ', ' + str(lon) + '\n'
+            trace_file.write(write_string)
 
 
 
