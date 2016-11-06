@@ -192,7 +192,7 @@ if __name__ == '__main__':
         for neighbor in graph[start]:
             if neighbor not in path:
                 vel, max_vel = ride_down_node(start, neighbor, vel, max_vel)
-                new_paths, new_maxes = find_all_paths(neighbor, vel, path, max_vel)
+                new_paths, new_maxes = find_all_paths(neighbor, vel, path[:], max_vel)
                 for p in new_paths: paths.append(p)
                 max_vels += new_maxes
         return paths, max_vels
