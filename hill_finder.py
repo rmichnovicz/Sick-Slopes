@@ -11,7 +11,7 @@ import acceleration
 def get_elevations_by_coords(lats, lngs):
     queries = dict()
     for lat, lng in zip(lats, lngs):
-        fname = ('grd' + ('n' if lat>0 else 's') 
+        fname = ('grd' + ('n' if lat>0 else 's')
                  + str(math.ceil(abs(lat))).zfill(2)
                  + ('e' if lng>0 else 'w')
                  + str(math.ceil(abs(lng))).zfill(3)
@@ -38,7 +38,7 @@ def get_elevations_by_coords(lats, lngs):
     return elevations
 
 def get_node_entry(target_node):
-    return (item for item in map_data 
+    return (item for item in map_data
             if item["data"]["id"] == target_node).__next__()
 
 def get_coords_by_nodes(nodes):
@@ -57,8 +57,8 @@ def latlong_dist(lat1_raw, lon1_raw, lat2_raw, lon2_raw):
     # approximate radius of earth in m
     R = 6373000.0
     dlon = lon2 - lon1
-    dlat = lat2 - lat1 
-    a = (math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) 
+    dlat = lat2 - lat1
+    a = (math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2)
          * math.sin(dlon / 2)**2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     distance = R * c
@@ -83,7 +83,7 @@ if __name__ == '__main__':
                 map_data = pickle.load(f)
         else:
             print('requesting map...')
-            map_data = api_link.Map(mapsize[0], mapsize[1], 
+            map_data = api_link.Map(mapsize[0], mapsize[1],
                                     mapsize[2], mapsize[3])
             with open(mapfilepath, 'wb') as f:
                 pickle.dump(map_data, f)
@@ -125,18 +125,18 @@ if __name__ == '__main__':
     superquery_lons = []
     superquery_keys = []
     for src, dst in unscanned:
-        print((node_lats[src], node_lons[src],
-                           node_lats[dst], node_lons[dst]), latlong_dist(node_lats[src], node_lons[src],
-                           node_lats[dst], node_lons[dst]))
+        # print((node_lats[src], node_lons[src],
+        #                    node_lats[dst], node_lons[dst]), latlong_dist(node_lats[src], node_lons[src],
+        #                    node_lats[dst], node_lons[dst]))
 
         measures_lat = int(abs(node_lats[src]-node_lats[dst]) * datapts_per_degree)
         measures_lon = int(abs(node_lons[src]-node_lons[dst]) * datapts_per_degree)
         n_steps = max(measures_lat, measures_lon, 2)
         #print(n_steps)
 
-        lat_steps = linspace(node_lats[src], node_lats[dst], 
+        lat_steps = linspace(node_lats[src], node_lats[dst],
                              num=n_steps, endpoint=True)
-        lon_steps = linspace(node_lons[src], node_lons[dst], 
+        lon_steps = linspace(node_lons[src], node_lons[dst],
                              num=n_steps, endpoint=True)
 
         superquery_lats += lat_steps.tolist()
@@ -163,7 +163,7 @@ if __name__ == '__main__':
         ):
             local_maxima.add(node)
 
-    maxima_by_elevation = sorted(list(local_maxima), 
+    maxima_by_elevation = sorted(list(local_maxima),
                                  key=lambda n: node_heights[n])
 
     #return final vel and max vel
@@ -180,41 +180,62 @@ if __name__ == '__main__':
         return vel, max_vel
 
 
-    def find_all_paths(start, vel, path=[], max_vel=0):
+    def find_all_paths(start, vel, path, max_vel=0):
         path.append(start)
-        print(path)
-        
+        # print("Path is now ", path)
+        # replacedinput
+        # print(path)
+
         if vel == 0:
+            # print("Returning single path ", path)
+            # replacedinput
             return [path], [max_vel]
 
         paths = []
         max_vels = []
         for neighbor in graph[start]:
+            # print("Exploring neighbor of", start, ": ", neighbor, "from", graph[start])
+            # replacedinput
             if neighbor not in path:
                 vel, max_vel = ride_down_node(start, neighbor, vel, max_vel)
                 new_paths, new_maxes = find_all_paths(neighbor, vel, path[:], max_vel)
                 for p in new_paths: paths.append(p)
                 max_vels += new_maxes
+        # print("returning many paths", paths)
+        # replacedinput
         return paths, max_vels
 
 
     print('descending...')
     paths = []
     max_vels = []
+    # print(maxima_by_elevation)
     for origin in maxima_by_elevation:
-        new_paths, new_maxes = find_all_paths(origin, 1.0)
+        # print("plugging in", origin)
+        new_paths, new_maxes = find_all_paths(origin, 1.0, [])
+        # print ("Adding ", new_paths)
+        # replacedinput
         paths += new_paths
         max_vels += new_maxes
 
     vels_and_paths = list(zip(max_vels, paths))
     #print(vels_and_paths[0])
     vels_and_paths = sorted(vels_and_paths, reverse=True)
-    
+
     # for v, p in vels_and_paths[:5]:
     #     print('max vel', v, 'path', p)
 
-    v, p = vels_and_paths[7]
-    print("Best velocity:", v)
+    v, p = vels_and_paths[0]
+    print("Best velocity:", v, "\nFrom ", vels_and_paths[0])
+    # Testing if path is in graph
+    first_path = vels_and_paths[0][1]
+    for i in range(len(first_path) - 1):
+        if first_path[i + 1] in graph[first_path[i]]:
+            print(first_path[i + 1], " is in ", graph[first_path[i]])
+        else:
+            print("Oh no! ", first_path[i + 1], " is not in ", graph[first_path[i]])
+            break
+    # end test
     with open('pins.txt', 'w') as trace_file:
         for node in p:
             lat = node_lats[node]
@@ -241,7 +262,7 @@ if __name__ == '__main__':
         while len(options) > 0 or len(stack) > 0:
             print('\nat node', node)
             print('stack size', len(stack))
-            
+
             options = tuple(graph[node] - targeted)
             print(len(options), 'options')
 
@@ -309,7 +330,7 @@ if __name__ == '__main__':
         ):
             for neighbor in graph[entry['data']['id']]:
                 neighbor_entry = get_node_entry(neighbor)
-                
+
                 # distance = latlong_dist(
                 #         entry['data']['lat'],
                 #         entry['data']['lon'],
