@@ -1,54 +1,27 @@
-#!/usr/bin/env python
-"""
-Very simple HTTP server in python.
+# We need to import request to access the details of the POST request
+# and render_template, to render our templates (form and response)
+# we'll use url_for to get some URLs for the app on the templates
+from flask import Flask, render_template, request, url_for
+app = Flask(__name__)
 
-Usage::
-    ./dummy-web-server.py [<port>]
+# Define a route for the default URL, which loads the form
+@app.route('/', methods=['GET'])
+def show_map():
+    return render_template('index.htm')
 
-Send a GET request::
-    curl http://localhost
+# Define a route for the action of the form, for example '/hello/'
+# We are also defining which type of requests this route is
+# accepting: POST requests in this case
+@app.route('/send_square/', methods=['POST'])
+def respond():
+    box = request.get_json()
+    return str(request.is_json)
 
-Send a HEAD request::
-    curl -I http://localhost
-
-Send a POST request::
-    curl -d "foo=bar&bin=baz" http://localhost
-
-"""
-from http.server import BaseHTTPRequestHandler, HTTPServer
-#import SocketServer
-import simplejson
-
-
-class S(BaseHTTPRequestHandler):
-    def _set_headers(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-
-    def do_GET(self):
-        self._set_headers()
-        f = open("index.htm", "r")
-        self.wfile.write(bytes(f.read(), "utf-8"))
-
-    def do_HEAD(self):
-        self._set_headers()
-
-    def do_POST(self):
-        # Doesn't do anything with posted data
-        self._set_headers()
+# Run the app :)
+if __name__ == '__main__':
+  app.run(
+        host="0.0.0.0",
+        port=int("80")
+  )
 
 
-def run(server_class=HTTPServer, handler_class=S, port=80):
-    server_address = ('127.0.0.1', port)
-    httpd = server_class(server_address, handler_class)
-    print('Starting httpd...')
-    httpd.serve_forever()
-
-if __name__ == "__main__":
-    from sys import argv
-
-    if len(argv) == 2:
-        run(port=int(argv[1]))
-    else:
-        run()

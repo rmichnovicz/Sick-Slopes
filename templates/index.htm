@@ -90,7 +90,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       // parameter when you first load the API. For example:
       // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
       var map;
-      var postURL = "http://slickslopes.me";
+      var postURL = "localhost";
 
       function initAutocomplete() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -175,7 +175,8 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         rectangle.setMap(map);
 
         // Add an event listener on the rectangle.
-        rectangle.addListener('bounds_changed', showNewRect);
+        // rectangle.addListener('bounds_changed', showNewRect);
+        // Not needed?
 
         // Define an info window on the map.
         infoWindow = new google.maps.InfoWindow();
@@ -183,7 +184,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
 
       function sendRectangle() {
         var rectBounds = rectangle.getBounds().toJSON();
-        $.post(postURL, rectBounds, displayGraph(data));
+        $.post("/send_square/", rectBounds, displayGraph(rectBounds));
         console.log(rectBounds);
       }
 
