@@ -1,0 +1,55 @@
+<!-- referenced https://developers.google.com/maps/documentation/javascript/examples/polyline-simple -->
+
+<!DOCTYPE html>
+<html>
+
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <meta charset="utf-8">
+  <title>Path Viewer</title>
+
+  <body>
+
+    <style>
+      #map-container {
+        height: 80vh;
+        width: 80%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #map {
+        height: 100%;
+      }
+    </style>
+
+    <div id="map-container">
+      <div id="map"></div>
+      <script>
+      function showMap() {
+        var pathCoords = [
+          !!!
+        ];
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 16,
+          center: pathCoords[0],
+          mapTypeId: 'terrain'
+        });
+
+        var thePath = new google.maps.Polyline({
+          path: pathCoords,
+          geodesic: true,
+          strokeColor: '#0000FF',
+          strokeOpacity: 1.0,
+          strokeWeight: 2
+        });
+
+        thePath.setMap(map);
+      }
+    </script>
+    </div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEiw0TtVlGhptMnW6UKV6KUsK6Svt3a3w&libraries=places&callback=showMap"></script>
+    <!--script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script-->
+
+  </body>
+</html>

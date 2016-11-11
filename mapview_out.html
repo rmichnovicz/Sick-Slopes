@@ -1,0 +1,88 @@
+<!-- referenced https://developers.google.com/maps/documentation/javascript/examples/polyline-simple -->
+
+<!DOCTYPE html>
+<html>
+
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <meta charset="utf-8">
+  <title>Path Viewer</title>
+
+  <body>
+
+    <style>
+      #map-container {
+        height: 80vh;
+        width: 80%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #map {
+        height: 100%;
+      }
+    </style>
+
+    <div id="map-container">
+      <div id="map"></div>
+      <script>
+      function showMap() {
+        var pathCoords = [
+{lat: 33.770261, lng: -84.391369},
+{lat: 33.770157, lng: -84.391366},
+{lat: 33.770115, lng: -84.391364},
+{lat: 33.770087, lng: -84.391363},
+{lat: 33.770053, lng: -84.391361},
+{lat: 33.770052, lng: -84.391402},
+{lat: 33.770053, lng: -84.391436},
+{lat: 33.770050, lng: -84.391461},
+{lat: 33.769982, lng: -84.391491},
+{lat: 33.769948, lng: -84.391513},
+{lat: 33.769889, lng: -84.391582},
+{lat: 33.769865, lng: -84.391629},
+{lat: 33.769882, lng: -84.391642},
+{lat: 33.769916, lng: -84.391660},
+{lat: 33.769959, lng: -84.391678},
+{lat: 33.769982, lng: -84.391639},
+{lat: 33.770014, lng: -84.391616},
+{lat: 33.770046, lng: -84.391610},
+{lat: 33.770083, lng: -84.391615},
+{lat: 33.770122, lng: -84.391638},
+{lat: 33.770156, lng: -84.391692},
+{lat: 33.770164, lng: -84.391750},
+{lat: 33.770166, lng: -84.391821},
+{lat: 33.770167, lng: -84.391904},
+{lat: 33.770154, lng: -84.391986},
+{lat: 33.770157, lng: -84.392149},
+{lat: 33.769951, lng: -84.392152},
+{lat: 33.769837, lng: -84.392152},
+{lat: 33.769787, lng: -84.392227},
+{lat: 33.769793, lng: -84.392334},
+{lat: 33.769810, lng: -84.392401},
+{lat: 33.769863, lng: -84.392395},
+{lat: 33.769862, lng: -84.392442},
+{lat: 33.769865, lng: -84.392538}
+        ];
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 16,
+          center: pathCoords[0],
+          mapTypeId: 'terrain'
+        });
+
+        var thePath = new google.maps.Polyline({
+          path: pathCoords,
+          geodesic: true,
+          strokeColor: '#0000FF',
+          strokeOpacity: 1.0,
+          strokeWeight: 2
+        });
+
+        thePath.setMap(map);
+      }
+    </script>
+    </div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEiw0TtVlGhptMnW6UKV6KUsK6Svt3a3w&libraries=places&callback=showMap"></script>
+    <!--script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script-->
+
+  </body>
+</html>
