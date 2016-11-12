@@ -7,6 +7,12 @@ import pickle
 from numpy import linspace
 import acceleration
 
+
+#params
+mapsize = (-84.4203,33.7677, -84.3812,33.7874)
+use_stoplights = True
+
+
 def get_elevations_by_coords(lats, lngs):
     queries = dict()
     for lat, lng in zip(lats, lngs):
@@ -68,7 +74,6 @@ if __name__ == '__main__':
                              #api="api06.dev.openstreetmap.org"
                              )
 
-    mapsize = (-84.4203,33.7677, -84.3812,33.7874)
     mapfilepath = 'map'+str(mapsize)+'.dat'
 
     try:
@@ -86,10 +91,13 @@ if __name__ == '__main__':
     except: # osmapi.OsmApi.MaximumRetryLimitReachedError:  #TODO: handle errors
         print("Could not get map data!")
 
-    #print(map_data)
+    
+    #with open('log/map_data_example.txt','w') as f:
+        #f.write(str(map_data))
+
     print('converting map to graph...')
     graph = map_to_graph(map_data)
-    print('graph completed with %d nodes' % (len(graph),))
+    print('graph completed with %d nodes' % len(graph))
     keys = list(graph.keys())
     # for k in keys[50:70]:
         #print(k, graph[k])
@@ -97,9 +105,16 @@ if __name__ == '__main__':
 
     print('finding node heights and building coordinate list...')
     node_heights, node_latlons = dict(), dict()
+    stoplights = set()
     for node, node_info in get_node_entries(graph.keys()):
         node_latlons[node] = (float(node_info['data']['lat']), 
                               float(node_info['data']['lon']))
+        if ('tag' in node_info['data'] and 'highway' in node_info['data']['tag']
+                and node_info['data']['tag']['highway'] == 'traffic_signals'
+        ):
+            stoplights.add(node)
+
+    print(len(stoplights), 'stoplights')
 
     latlons_items = tuple(node_latlons.items())
     node_iter = (x[0] for x in latlons_items)
@@ -113,7 +128,7 @@ if __name__ == '__main__':
 
     print('identifying edges...')
     datapts_per_degree = 10800
-    unscanned = [(k,v) for k,vlist in graph.items() for v in vlist]
+    unscanned = ((k,v) for k,vlist in graph.items() for v in vlist)
     edge_heights = dict()
 
     superquery_lats = []
@@ -138,7 +153,7 @@ if __name__ == '__main__':
     print("Found %d. Scanning them..." % len(superquery_keys))
     elevations = get_elevations_by_coords(superquery_lats, superquery_lons)
     for i in range(len(elevations)):
-        item = float(elevations[i])
+        item = elevations[i]
         if superquery_keys[i] in edge_heights.keys():
             edge_heights[superquery_keys[i]].append(item)
         else:
@@ -155,9 +170,8 @@ if __name__ == '__main__':
         ):
             local_maxima.add(node)
 
-    maxima_by_elevation = sorted(list(local_maxima),
-                                 key=lambda n: node_heights[n])
-    print('Found', len(maxima_by_elevation), 'local maxima')
+    #maxima_by_elevation = sorted(list(local_maxima), key=lambda n: node_heights[n])
+    print('Found', len(local_maxima), 'local maxima')
 
     global edge_sim_count
     edge_sim_count = 0
@@ -165,6 +179,7 @@ if __name__ == '__main__':
     def ride_down_node(src, dest, vel, max_vel=0):
         global edge_sim_count
         edge_sim_count += 1
+        if vel > max_vel: max_vel = vel
         dist_internode = latlong_dist(node_latlons[src][0], node_latlons[src][1],
                                       node_latlons[dest][0], node_latlons[dest][1])
         dist = dist_internode / len(edge_heights[(src, dest)])
@@ -172,8 +187,8 @@ if __name__ == '__main__':
         for i in range(1, len(edge)):
             dh = edge[i] - edge[i-1]
             vel = acceleration.new_velocity(vel, dh, dist)
-            if vel == 0: break
             if vel > max_vel: max_vel = vel
+            if vel == 0: break
         return vel, max_vel
 
 
@@ -183,7 +198,10 @@ if __name__ == '__main__':
         # replacedinput
         # print(path)
 
-        if vel == 0:
+        if (vel == 0 
+            or (use_stoplights and start in stoplights and len(path) > 1)
+            or len(graph[start] - set(path)) == 0
+        ):
             # print("Returning single path ", path)
             # replacedinput
             return [path], [max_vel]
@@ -196,7 +214,8 @@ if __name__ == '__main__':
             if neighbor not in path:
                 vel, max_vel = ride_down_node(start, neighbor, vel, max_vel)
                 new_paths, new_maxes = find_all_paths(neighbor, vel, path[:], max_vel)
-                for p in new_paths: paths.append(p)
+                #for p in new_paths: paths.append(p)
+                paths += new_paths
                 max_vels += new_maxes
         # print("returning many paths", paths)
         # replacedinput
@@ -207,7 +226,9 @@ if __name__ == '__main__':
     paths = []
     max_vels = []
     # print(maxima_by_elevation)
-    for origin in maxima_by_elevation:
+    origins = (local_maxima | stoplights) if use_stoplights else local_maxima
+    #origins = stoplights
+    for origin in origins:
         # print("plugging in", origin)
         new_paths, new_maxes = find_all_paths(origin, 1.0, [])
         # print ("Adding ", new_paths)
@@ -217,15 +238,17 @@ if __name__ == '__main__':
 
     vels_and_paths = list(zip(max_vels, paths))
     #print(vels_and_paths[0])
-    vels_and_paths = sorted(vels_and_paths, reverse=True)
+    #vels_and_paths = sorted(vels_and_paths, key=lambda vp: len(vp[1]))
+    vels_and_paths = sorted(vels_and_paths)
+    vels_and_paths = vels_and_paths[::-1]
 
-    print('Scanned', edge_sim_count, 'edges')
+    print('Simulated', edge_sim_count, 'edges')
 
     # for v, p in vels_and_paths[:5]:
     #     print('max vel', v, 'path', p)
 
     bestvel, bestpath = vels_and_paths[0]
-    print("Best velocity:", bestvel)#, "\nFrom ", vels_and_paths[0])
+    #print("Best velocity:", bestvel)#, "\nFrom ", vels_and_paths[0])
     # Testing if path is in graph
     #first_path = vels_and_paths[0][1]
     # for i in range(len(p) - 1):
@@ -236,13 +259,23 @@ if __name__ == '__main__':
     #         break
     # end test
 
-    for node in bestpath:
-        print('node', node, 'height', node_heights[node])
+    for i, vp in enumerate(vels_and_paths[:200]):
+        print('%2d. %d -> %f (%d)' % (i, vp[1][0], vp[0], len(vp[1])))
 
     import mapview_creator
     coord_path = [node_latlons[n] for n in bestpath]
     mapview_creator.create_map_html(coord_path)
 
+    vel = 1.0
+    max_vel = 0
+    print('Speed at 0 is', vel)
+    print('origin is', bestpath[0])
+    for i in range(1, len(bestpath)):
+        src, dst = bestpath[i-1], bestpath[i]
+        vel, max_vel = ride_down_node(src, dst, vel, max_vel)
+        print('Speed from', src, 'to', dst, '-', node_heights[src],
+                'to', node_heights[dst], 'is', vel)
+    print('Max velocity is', max_vel)
 
 
     # with open('path.txt', 'w') as trace_file:

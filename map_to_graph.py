@@ -9,6 +9,7 @@ def map_to_graph(map_data):
                 and 'data' in entry.keys()
                 and 'tag' in entry['data'].keys()
                 and 'highway' in entry['data']['tag'].keys()
+                and entry['data']['tag']['highway'] != 'steps'
         ):
             way = entry['data']['nd']
             way_lists.append(way)

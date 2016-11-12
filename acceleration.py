@@ -7,6 +7,9 @@ mass = 80 #kg
 frict_c = .03 #Coefficient of friction
 
 def new_velocity(v0, dh, dist): # for small changes in V
+    if v0 == 0:
+        return 0
+
     theta = math.atan2(dh, dist)
     a = ((g * math.sin(theta))
          - (1.225 * drag_c * cross_a * v0 ** 2) / (2 * mass)
