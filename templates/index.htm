@@ -72,7 +72,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     </style>
   </head>
   <body>
-    <button onclick="sendRectangle()">Send the shit!</button>
+    <button id="send">Send the shit!</button>
 
     <input id="pac-input" class="controls" type="text" placeholder="Search Box">
     <div id="map-container">
@@ -81,6 +81,11 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     <div id="result-container">
 
     </div>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEiw0TtVlGhptMnW6UKV6KUsK6Svt3a3w&libraries=places&callback=initAutocomplete"
+         async defer></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js">
+    </script>
+
     <script>
       // This example adds a search box to a map, using the Google Place Autocomplete
       // feature. People can enter geographical searches. The search box will return a
@@ -182,21 +187,22 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         infoWindow = new google.maps.InfoWindow();
       }
 
-      function sendRectangle() {
-        var rectBounds = rectangle.getBounds().toJSON();
-        $.post("/send_square/", rectBounds, displayGraph(rectBounds));
-        console.log(rectBounds);
-      }
-
-      function displayGraph(data) {
-
-      }
-
+      $(document).ready(function() {
+        $("#send").click(function() {
+          var rectBounds = rectangle.getBounds().toJSON();
+          $.ajax({
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(rectBounds),
+            dataType: 'json',
+            url: '/send_square/',
+            success: function(e) {
+              console.log(e); //TODO: Why is it not logging anything?!?
+            }
+          });
+          //console.log(rectBounds);
+        })
+      })
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEiw0TtVlGhptMnW6UKV6KUsK6Svt3a3w&libraries=places&callback=initAutocomplete"
-         async defer></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js">
-    </script>
-
   </body>
 </html>
