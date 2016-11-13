@@ -1,4 +1,3 @@
-import random
 import subprocess
 from map_to_graph import map_to_graph
 import math
@@ -33,21 +32,17 @@ def get_elevations_by_coords(lats, lngs):
             universal_newlines=True
         )
         output, err = proc.communicate(queries[fname])
-        elevations += output.splitlines()
+        elevations += [float(s) for s in output.splitlines()]
 
     return elevations
 
-def get_node_entry(target_node):
-    return (item for item in map_data
-            if item["data"]["id"] == target_node).__next__()
-
-def get_coords_by_nodes(nodes):
-    lats, lons = list(), list()
-    for node in nodes:
-        node_info = get_node_entry(node)
-        lats.append( float(node_info['data']['lat']) )
-        lons.append( float(node_info['data']['lon']) )
-    return (lats, lons)
+def get_node_entries(target_nodes):
+    # return (item for item in map_data
+    #         if item["data"]["id"] == target_node).__next__()
+    for item in map_data:
+        if item["data"]["id"] in target_nodes:
+            yield (item["data"]["id"], item)
+    
 
 def latlong_dist(lat1_raw, lon1_raw, lat2_raw, lon2_raw):
     lat1 = math.radians(float(lat1_raw))
@@ -73,7 +68,7 @@ if __name__ == '__main__':
                              #api="api06.dev.openstreetmap.org"
                              )
 
-    mapsize = (-84.39565,33.77372, -84.39067,33.77412)
+    mapsize = (-84.4203,33.7677, -84.3812,33.7874)
     mapfilepath = 'map'+str(mapsize)+'.dat'
 
     try:
@@ -99,24 +94,24 @@ if __name__ == '__main__':
     # for k in keys[50:70]:
         #print(k, graph[k])
 
-    print('finding node heights...')
-    node_heights = dict()
-    node_list = list(graph.keys())
-    lats, lons = get_coords_by_nodes(node_list)
-    elevations = get_elevations_by_coords(lats, lons)
-    for i in range(len(node_list)):
-        node_heights[node_list[i]] = float(elevations[i])
 
-    print('building node coordinate list...')
-    node_lats, node_lons = dict(), dict()
-    nodes = list(graph.keys())
-    lats, lons = get_coords_by_nodes(nodes)
-    for i in range(len(nodes)):
-        node_lats[nodes[i]] = lats[i]
-        node_lons[nodes[i]] = lons[i]
+    print('finding node heights and building coordinate list...')
+    node_heights, node_latlons = dict(), dict()
+    for node, node_info in get_node_entries(graph.keys()):
+        node_latlons[node] = (float(node_info['data']['lat']), 
+                              float(node_info['data']['lon']))
+
+    latlons_items = tuple(node_latlons.items())
+    node_iter = (x[0] for x in latlons_items)
+    lat_iter = (x[1][0] for x in latlons_items)
+    lon_iter = (x[1][1] for x in latlons_items)
+    elevations = get_elevations_by_coords(lat_iter, lon_iter)
+    for node, elev in zip(node_iter, elevations):
+        node_heights[node] = elev
+        
 
 
-    print('scanning edges...')
+    print('identifying edges...')
     datapts_per_degree = 10800
     unscanned = [(k,v) for k,vlist in graph.items() for v in vlist]
     edge_heights = dict()
@@ -128,22 +123,19 @@ if __name__ == '__main__':
         # print((node_lats[src], node_lons[src],
         #                    node_lats[dst], node_lons[dst]), latlong_dist(node_lats[src], node_lons[src],
         #                    node_lats[dst], node_lons[dst]))
-
-        measures_lat = int(abs(node_lats[src]-node_lats[dst]) * datapts_per_degree)
-        measures_lon = int(abs(node_lons[src]-node_lons[dst]) * datapts_per_degree)
+        llsrc, lldst = node_latlons[src], node_latlons[dst]
+        measures_lat = int(abs(llsrc[0]-lldst[0]) * datapts_per_degree)
+        measures_lon = int(abs(llsrc[1]-lldst[1]) * datapts_per_degree)
         n_steps = max(measures_lat, measures_lon, 2)
         #print(n_steps)
 
-        lat_steps = linspace(node_lats[src], node_lats[dst],
-                             num=n_steps, endpoint=True)
-        lon_steps = linspace(node_lons[src], node_lons[dst],
-                             num=n_steps, endpoint=True)
-
+        lat_steps = linspace(llsrc[0], lldst[0], num=n_steps, endpoint=True)
+        lon_steps = linspace(llsrc[1], lldst[1], num=n_steps, endpoint=True)
         superquery_lats += lat_steps.tolist()
         superquery_lons += lon_steps.tolist()
         superquery_keys += [(src,dst)] * n_steps
 
-    print(len(superquery_keys), len(superquery_lats), len(superquery_lons))
+    print("Found %d. Scanning them..." % len(superquery_keys))
     elevations = get_elevations_by_coords(superquery_lats, superquery_lons)
     for i in range(len(elevations)):
         item = float(elevations[i])
@@ -165,11 +157,16 @@ if __name__ == '__main__':
 
     maxima_by_elevation = sorted(list(local_maxima),
                                  key=lambda n: node_heights[n])
+    print('Found', len(maxima_by_elevation), 'local maxima')
 
+    global edge_sim_count
+    edge_sim_count = 0
     #return final vel and max vel
     def ride_down_node(src, dest, vel, max_vel=0):
-        dist_internode = latlong_dist(node_lats[src], node_lons[src],
-                                      node_lats[dest], node_lons[dest])
+        global edge_sim_count
+        edge_sim_count += 1
+        dist_internode = latlong_dist(node_latlons[src][0], node_latlons[src][1],
+                                      node_latlons[dest][0], node_latlons[dest][1])
         dist = dist_internode / len(edge_heights[(src, dest)])
         edge = edge_heights[(src,dest)]
         for i in range(1, len(edge)):
@@ -222,31 +219,38 @@ if __name__ == '__main__':
     #print(vels_and_paths[0])
     vels_and_paths = sorted(vels_and_paths, reverse=True)
 
+    print('Scanned', edge_sim_count, 'edges')
+
     # for v, p in vels_and_paths[:5]:
     #     print('max vel', v, 'path', p)
 
-    v, p = vels_and_paths[0]
-    print("Best velocity:", v, "\nFrom ", vels_and_paths[0])
+    bestvel, bestpath = vels_and_paths[0]
+    print("Best velocity:", bestvel)#, "\nFrom ", vels_and_paths[0])
     # Testing if path is in graph
-    first_path = vels_and_paths[0][1]
-    for i in range(len(first_path) - 1):
-        if first_path[i + 1] in graph[first_path[i]]:
-            print(first_path[i + 1], " is in ", graph[first_path[i]])
-        else:
-            print("Oh no! ", first_path[i + 1], " is not in ", graph[first_path[i]])
-            break
+    #first_path = vels_and_paths[0][1]
+    # for i in range(len(p) - 1):
+    #     if first_path[i + 1] in graph[first_path[i]]:
+    #         print(first_path[i + 1], " is in ", graph[first_path[i]])
+    #     else:
+    #         print("Oh no! ", first_path[i + 1], " is not in ", graph[first_path[i]])
+    #         break
     # end test
-    with open('pins.txt', 'w') as trace_file:
-        for node in p:
-            lat = node_lats[node]
-            lon = node_lons[node]
-            write_string = str(lat) + ', ' + str(lon) + '\n'
-            trace_file.write(write_string)
+
+    for node in bestpath:
+        print('node', node, 'height', node_heights[node])
+
+    import mapview_creator
+    coord_path = [node_latlons[n] for n in bestpath]
+    mapview_creator.create_map_html(coord_path)
 
 
 
-
-
+    # with open('path.txt', 'w') as trace_file:
+    #     for node in p:
+    #         lat = node_lats[node]
+    #         lon = node_lons[node]
+    #         write_string = str(lat) + ', ' + str(lon) + '\n'
+    #         trace_file.write(write_string)
 
 
     '''max_vel = 0
