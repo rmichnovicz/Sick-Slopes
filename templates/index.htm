@@ -194,10 +194,10 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(rectBounds),
-            dataType: 'json',
+            //dataType: 'json',
             url: '/send_square/',
-            success: function(e) {
-              console.log(e); //TODO: Why is it not logging anything?!?
+            success: function(data) {
+              console.log(data);
             }
           });
           //console.log(rectBounds);
