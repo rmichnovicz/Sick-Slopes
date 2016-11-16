@@ -10,9 +10,6 @@ app = Flask(__name__)
 def find_hills(west, south, east, north):
     return True
 
-def is_legal_bounds(west, south, east, north):
-    return True
-
 # Define a route for the default URL, which loads the form
 @app.route('/', methods=['GET'])
 def show_home():
@@ -20,19 +17,12 @@ def show_home():
 
 @app.route('/send_square/', methods=['POST'])
 def respond():
-    try:
-        data = request.get_json(force=True)
-        if not is_legal_bounds(
-            data['west'], data['south'], data['east'], data['north']
-        ):
-            return str(False)
-        hill_finder = Process(target=find_hills, args=(
-            data['west'], data['south'], data['east'], data['north']
-        ))
-        hill_finder.daemon = True
-        hill_finder.start()
-    except:
-        return str(False)
+    data = request.get_json(force=True)
+    hill_finder = Process(target=find_hills, args=(
+        data['west'], data['south'], data['east'], data['north']
+    ))
+    hill_finder.daemon = True
+    hill_finder.start()
     return str(request.is_json)
 
 

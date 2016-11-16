@@ -1,6 +1,6 @@
 import acceleration
 import hill_finder
-print(acceleration.new_velocity(3.0, 0.0, 3.0))
+print(acceleration.new_velocity(1.0, 0.0, 3.0))
 lat = 33.773963
 lng = -84.394920
 end_lng = -84.391991
