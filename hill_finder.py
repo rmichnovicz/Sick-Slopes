@@ -74,7 +74,7 @@ if __name__ == '__main__':
                              #api="api06.dev.openstreetmap.org"
                              )
 
-    mapfilepath = 'map'+str(mapsize)+'.dat'
+    mapfilepath = 'maps/map'+str(mapsize)+'.dat'
 
     try:
         if os.path.exists(mapfilepath):

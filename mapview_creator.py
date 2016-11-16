@@ -1,8 +1,8 @@
 
 
 def create_map_html(latlon_list):
-    srcfile = open('mapview_src.html', 'r')
-    outfile = open('mapview_out.html', 'w')
+    srcfile = open('view/mapview_src.html', 'r')
+    outfile = open('view/mapview_out.html', 'w')
     for line in srcfile:
         if not '!!!' in line:
             outfile.write(line)

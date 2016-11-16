@@ -7,4 +7,6 @@ __pycache__/*
 path.txt
 lol.txt
 map*.dat
+*/map*.dat
 map.osm
+*.py~
