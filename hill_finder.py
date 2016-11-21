@@ -12,6 +12,44 @@ import acceleration
 mapsize = (-84.4203,33.7677, -84.3812,33.7874)
 use_stoplights = True
 
+def generate_find_all_paths(
+		use_stoplights, 
+		use_hill_to_slow_down = False, 
+		slow_down_to = 3.5
+	): # All velocities are in m/s
+    def find_all_paths(start, vel, path, max_vel=0):
+        path.append(start)
+        # print("Path is now ", path)
+        # replacedinput
+        # print(path)
+		
+		if (use_hill_to_slow_down and len(graph[start] - set(path)) == 0 and vel > slow_down_to):
+			return None
+
+        if (vel == 0 
+            or (use_stoplights and start in stoplights and len(path) > 1)
+            or len(graph[start] - set(path)) == 0
+        ):
+            # print("Returning single path ", path)
+            # replacedinput
+            return [path], [max_vel]
+
+        paths = []
+        max_vels = []
+        for neighbor in graph[start]:
+            # print("Exploring neighbor of", start, ": ", neighbor, "from", graph[start])
+            # replacedinput
+            if neighbor not in path:
+                vel, max_vel = ride_down_node(start, neighbor, vel, max_vel)
+                new_paths, new_maxes = find_all_paths(neighbor, vel, path[:], max_vel)
+                #for p in new_paths: paths.append(p)
+                paths += new_paths
+                max_vels += new_maxes
+        # print("returning many paths", paths)
+        # replacedinput
+        return paths, max_vels
+	return find_all_paths
+
 
 def get_elevations_by_coords(lats, lngs):
     queries = dict()
