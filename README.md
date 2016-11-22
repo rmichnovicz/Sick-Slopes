@@ -21,8 +21,12 @@ I don't know if you need the stuff after numpy, it was just on their website.
 Change the numbers in the file name to the ceiling of the coordinates you need (eg. N 33.7 W 84.4 -> n34w085)
 
     wget https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/ArcGrid/n34w085.zip
-    unzip n34w085.zip
+    unzip n34w085.zip -d n34w085
     rm n34w085.zip
+
+**Set up program**
+
+    mkdir maps
 
 How It works
 ------------

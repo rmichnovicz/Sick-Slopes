@@ -9,7 +9,7 @@ import acceleration
 
 
 #params
-mapsize = (-84.4203,33.7677, -84.3812,33.7874)
+mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)
 use_stoplights = True
 
 def generate_find_all_paths(
@@ -23,8 +23,8 @@ def generate_find_all_paths(
         # replacedinput
         # print(path)
 		
-		if (use_hill_to_slow_down and len(graph[start] - set(path)) == 0 and vel > slow_down_to):
-			return None
+        if (use_hill_to_slow_down and len(graph[start] - set(path)) == 0 and vel > slow_down_to):
+            return None
 
         if (vel == 0 
             or (use_stoplights and start in stoplights and len(path) > 1)
@@ -48,7 +48,7 @@ def generate_find_all_paths(
         # print("returning many paths", paths)
         # replacedinput
         return paths, max_vels
-	return find_all_paths
+    return find_all_paths
 
 
 def get_elevations_by_coords(lats, lngs):
@@ -125,6 +125,9 @@ if __name__ == '__main__':
                                     mapsize[2], mapsize[3])
             with open(mapfilepath, 'wb') as f:
                 pickle.dump(map_data, f)
+    
+    except IOError as e:
+        print("Couldn't write map data!", e.errorno, e.strerror)
 
     except: # osmapi.OsmApi.MaximumRetryLimitReachedError:  #TODO: handle errors
         print("Could not get map data!")
@@ -203,8 +206,9 @@ if __name__ == '__main__':
     print('identifying local and global maxima...')
     local_maxima = set()
     for node in graph.keys():
+        print("trying node", node)
         if (node_heights[node]
-          > max(node_heights[n] for n in graph[node])
+            > max(node_heights[n] for n in graph[node])
         ):
             local_maxima.add(node)
 
