@@ -8,25 +8,48 @@ from numpy import linspace
 import acceleration
 
 
-#params
-mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)
+# Globals
+# Lord forgive me, for I have sinned.
+# But really, this is function is supposed to be in an isolated process or thread.
+# Is it really worth passing around all of these?
 use_stoplights = True
+node_heights, node_latlons, graph, edge_heights = dict(), dict(), dict(), dict()
+stoplights = set()
+map_data = []
+
+def ride_down_node(src, dest, vel, max_vel=0):
+    global edge_sim_count
+    edge_sim_count += 1
+    if vel > max_vel: max_vel = vel
+    dist_internode = latlong_dist(node_latlons[src][0], node_latlons[src][1],
+                                  node_latlons[dest][0], node_latlons[dest][1])
+    dist = dist_internode / len(edge_heights[(src, dest)])
+    edge = edge_heights[(src,dest)]
+    for i in range(1, len(edge)):
+        dh = edge[i] - edge[i-1]
+        vel = acceleration.new_velocity(vel, dh, dist)
+        if vel > max_vel: max_vel = vel
+        if vel == 0: break
+    return vel, max_vel
 
 def generate_find_all_paths(
-		use_stoplights, 
-		use_hill_to_slow_down = False, 
+		use_stoplights = True,
+        #sort_paths = False,
+        cap_paths = False,
+        paths_cap = 100,
+		use_hill_to_slow_down = False,
 		slow_down_to = 3.5
 	): # All velocities are in m/s
     def find_all_paths(start, vel, path, max_vel=0):
         path.append(start)
         # print("Path is now ", path)
-        # replacedinput
-        # print(path)
-		
-        if (use_hill_to_slow_down and len(graph[start] - set(path)) == 0 and vel > slow_down_to):
+
+        if (use_hill_to_slow_down and len(graph[start] - set(path)) == 0 and
+            vel > slow_down_to
+        ):
             return None
 
-        if (vel == 0 
+        if (vel == 0
             or (use_stoplights and start in stoplights and len(path) > 1)
             or len(graph[start] - set(path)) == 0
         ):
@@ -36,7 +59,13 @@ def generate_find_all_paths(
 
         paths = []
         max_vels = []
-        for neighbor in graph[start]:
+        neighbors = list(graph[start])
+        # print("Trying to sort", len(neighbors))
+        # TODO: I'd like to sort everything, but sorting 2/3 element lists seems to be taking forever
+        if(len(neighbors) > 3):
+            neighbors = sorted(list(graph[start]), key=lambda neighbor: node_heights[neighbor])
+
+        for neighbor in neighbors:
             # print("Exploring neighbor of", start, ": ", neighbor, "from", graph[start])
             # replacedinput
             if neighbor not in path:
@@ -83,10 +112,11 @@ def get_elevations_by_coords(lats, lngs):
 def get_node_entries(target_nodes):
     # return (item for item in map_data
     #         if item["data"]["id"] == target_node).__next__()
+    global map_data
     for item in map_data:
         if item["data"]["id"] in target_nodes:
             yield (item["data"]["id"], item)
-    
+
 
 def latlong_dist(lat1_raw, lon1_raw, lat2_raw, lon2_raw):
     lat1 = math.radians(float(lat1_raw))
@@ -103,10 +133,11 @@ def latlong_dist(lat1_raw, lon1_raw, lat2_raw, lon2_raw):
     distance = R * c
     return distance
 
+def find_hills(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
+                        # (left, down, right, up)
 
-
-
-if __name__ == '__main__':
+    global map_data, node_heights, node_latlons, graph, edge_heights, \
+        use_stoplights, stoplights
     api_link = osmapi.OsmApi(#username='evanxq1@gmail.com',
                              #password='hrVQ*DO9aD9q'#,
                              #api="api06.dev.openstreetmap.org"
@@ -125,21 +156,21 @@ if __name__ == '__main__':
                                     mapsize[2], mapsize[3])
             with open(mapfilepath, 'wb') as f:
                 pickle.dump(map_data, f)
-    
+
     except IOError as e:
         print("Couldn't write map data!", e.errorno, e.strerror)
 
     except: # osmapi.OsmApi.MaximumRetryLimitReachedError:  #TODO: handle errors
         print("Could not get map data!")
 
-    
+
     #with open('log/map_data_example.txt','w') as f:
         #f.write(str(map_data))
 
     print('converting map to graph...')
     graph = map_to_graph(map_data)
     print('graph completed with %d nodes' % len(graph))
-    keys = list(graph.keys())
+    #keys = list(graph.keys())
     # for k in keys[50:70]:
         #print(k, graph[k])
 
@@ -148,7 +179,7 @@ if __name__ == '__main__':
     node_heights, node_latlons = dict(), dict()
     stoplights = set()
     for node, node_info in get_node_entries(graph.keys()):
-        node_latlons[node] = (float(node_info['data']['lat']), 
+        node_latlons[node] = (float(node_info['data']['lat']),
                               float(node_info['data']['lon']))
         if ('tag' in node_info['data'] and 'highway' in node_info['data']['tag']
                 and node_info['data']['tag']['highway'] == 'traffic_signals'
@@ -164,7 +195,7 @@ if __name__ == '__main__':
     elevations = get_elevations_by_coords(lat_iter, lon_iter)
     for node, elev in zip(node_iter, elevations):
         node_heights[node] = elev
-        
+
 
 
     print('identifying edges...')
@@ -206,7 +237,7 @@ if __name__ == '__main__':
     print('identifying local and global maxima...')
     local_maxima = set()
     for node in graph.keys():
-        print("trying node", node)
+        #print("trying node", node)
         if (node_heights[node]
             > max(node_heights[n] for n in graph[node])
         ):
@@ -218,20 +249,7 @@ if __name__ == '__main__':
     global edge_sim_count
     edge_sim_count = 0
     #return final vel and max vel
-    def ride_down_node(src, dest, vel, max_vel=0):
-        global edge_sim_count
-        edge_sim_count += 1
-        if vel > max_vel: max_vel = vel
-        dist_internode = latlong_dist(node_latlons[src][0], node_latlons[src][1],
-                                      node_latlons[dest][0], node_latlons[dest][1])
-        dist = dist_internode / len(edge_heights[(src, dest)])
-        edge = edge_heights[(src,dest)]
-        for i in range(1, len(edge)):
-            dh = edge[i] - edge[i-1]
-            vel = acceleration.new_velocity(vel, dh, dist)
-            if vel > max_vel: max_vel = vel
-            if vel == 0: break
-        return vel, max_vel
+
 
 
     def find_all_paths(start, vel, path, max_vel=0):
@@ -240,7 +258,7 @@ if __name__ == '__main__':
         # replacedinput
         # print(path)
 
-        if (vel == 0 
+        if (vel == 0
             or (use_stoplights and start in stoplights and len(path) > 1)
             or len(graph[start] - set(path)) == 0
         ):
@@ -270,9 +288,11 @@ if __name__ == '__main__':
     # print(maxima_by_elevation)
     origins = (local_maxima | stoplights) if use_stoplights else local_maxima
     #origins = stoplights
-    for origin in origins:
-        # print("plugging in", origin)
-        new_paths, new_maxes = find_all_paths(origin, 1.0, [])
+    find_the_paths = generate_find_all_paths()
+    originz = sorted(local_maxima)
+    for origin in range(len(originz)):
+        print("plugging in", origin)
+        new_paths, new_maxes = find_the_paths(originz[origin], 1.0, [])
         # print ("Adding ", new_paths)
         # replacedinput
         paths += new_paths
@@ -318,6 +338,9 @@ if __name__ == '__main__':
         print('Speed from', src, 'to', dst, '-', node_heights[src],
                 'to', node_heights[dst], 'is', vel)
     print('Max velocity is', max_vel)
+
+if __name__ == '__main__':
+    find_hills()
 
 
     # with open('path.txt', 'w') as trace_file:
