@@ -37,14 +37,14 @@ def get_json():
         "node_heights": node_heights,
         "node_latlons": node_latlons,
         "edge_heights": edge_heights
-        })
+        }, JSONIFY_PRETTYPRINT_REGULAR = False)
 
 
 # Run the app :)
 if __name__ == '__main__':
   app.run(
         host="0.0.0.0",
-        port=int("81")
+        port=int("80")
   )
 
 
