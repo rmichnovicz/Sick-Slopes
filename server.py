@@ -1,7 +1,7 @@
 # We need to import request to access the details of the POST request
 # and render_template, to render our templates (form and response)
 # we'll use url_for to get some URLs for the app on the templates
-from flask import Flask, render_template, request, url_for, jsonify
+from flask import Flask, render_template, request, url_for, jsonify, send_file
 from multiprocessing import Process
 from make_map import make_map
 
@@ -19,26 +19,50 @@ def show_home():
 @app.route('/send_square/', methods=['POST'])
 def respond():
     data = request.get_json(force=True)
-    hill_finder = Process(target=find_hills, args=(
-        data['west'], data['south'], data['east'], data['north']
-    ))
-    hill_finder.daemon = True
-    hill_finder.start()
-    return str(request.is_json)
+    success, stoplights, local_maxima, graph, node_heights, node_latlons, \
+        edge_heights = make_map((
+            data['west'],
+            data['south'],
+            data['east'],
+            data['north']
+            ))
+    if (success):
+        return jsonify({
+            "stoplights": stoplights,
+            "local_maxima": local_maxima,
+            "graph": graph,
+            "node_heights": node_heights,
+            "node_latlons": node_latlons,
+            "edge_heights": edge_heights
+            })
+    return jsonify(False)
+
+    # hill_finder = Process(target=find_hills, args=(
+    #     data['west'], data['south'], data['east'], data['north']
+    # ))
+    # hill_finder.daemon = True
+    # hill_finder.start()
+    # return str(request.is_json)
 
 @app.route("/get_json/")
 def get_json():
-    stoplights, local_maxima, graph, node_heights, node_latlons, edge_heights \
-        = make_map()
-    return jsonify({
-        "stoplights": stoplights,
-        "local_maxima": local_maxima,
-        "graph": graph,
-        "node_heights": node_heights,
-        "node_latlons": node_latlons,
-        "edge_heights": edge_heights
-        }, JSONIFY_PRETTYPRINT_REGULAR = False)
+    success, stoplights, local_maxima, graph, node_heights, node_latlons, \
+        edge_heights = make_map()
+    if (success):
+        return jsonify({
+            "stoplights": stoplights,
+            "local_maxima": local_maxima,
+            "graph": graph,
+            "node_heights": node_heights,
+            "node_latlons": node_latlons,
+            "edge_heights": edge_heights
+            })
+    return jsonify(False)
 
+# TODO Remove when implementing nginx
+@app.route("/favicon.ico")
+def get_favicon():
+    return send_file('favicon.ico')
 
 # Run the app :)
 if __name__ == '__main__':

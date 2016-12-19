@@ -8,7 +8,8 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
   <head>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
-    <title>Places Searchbox</title>
+    <link rel="shortcut icon" href="favicon.ico">
+    <title>Sick Slopes!</title>
     <style>
       /* Always set the map height explicitly to define the size of the div
        * element that contains the map. */
@@ -70,21 +71,11 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         width: 345px;
       }
     </style>
-  </head>
-  <body>
-    <button id="send">Send the shit!</button>
-
-    <input id="pac-input" class="controls" type="text" placeholder="Search Box">
-    <div id="map-container">
-      <div id="map"></div>
-    </div>
-    <div id="result-container">
-
-    </div>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEiw0TtVlGhptMnW6UKV6KUsK6Svt3a3w&libraries=places&callback=initAutocomplete"
-         async defer></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js">
-    </script>
+      </script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 
     <script>
       // This example adds a search box to a map, using the Google Place Autocomplete
@@ -96,10 +87,18 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
       var map;
       var postURL = "localhost";
+      var data;
+      var graph;
+      var origins;
+      var results;
+      var edgeHeights;
+      var stoplights;
+      var useStoplights;
+      var nodeLatLongs;
 
       function initAutocomplete() {
         map = new google.maps.Map(document.getElementById('map'), {
-          center: {lat: -33.8688, lng: 151.2195},
+          center: {lat: 33.77755, lng: -84.40075},
           zoom: 13,
           mapTypeId: 'roadmap'
         });
@@ -164,10 +163,10 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           rectangle.setBounds(bounds)
         });
         var originalRectBounds = {
-          north: -33.8688,
-          south: -33.8888,
-          east: 151.2195,
-          west: 151.2095
+          north: 33.7874,
+          south: 33.7677,
+          east: -84.3812,
+          west: -84.4203
         };
 
         // Define the rectangle and set its editable property to true.
@@ -188,21 +187,183 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       }
 
       $(document).ready(function() {
+
+        $("#result-container").accordion({
+          heightStyle: "content"
+        });
+
         $("#send").click(function() {
           var rectBounds = rectangle.getBounds().toJSON();
+          useStoplights = $("#stoplights").prop('checked');
+          var startSpeed = 1.0 //parseFloat($("#startSpeed").val());
+          if (startSpeed == NaN) {
+            startSpeed = 1.0;
+          }
+          var findPaths = generateFindPaths()
+          $("#send").prop('disabled', true);
+          $("#status").html("Getting Map...");
           $.ajax({
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(rectBounds),
             //dataType: 'json',
             url: '/send_square/',
-            success: function(data) {
+            success: function(inputData) {
+              data = inputData;
               console.log(data);
+              graph = data["graph"];
+              stoplights = data["stoplights"]
+              nodeLatLongs = data["node_latlongs"];
+              edgeHeights = data["edge_heights"];
+              $("#status").html("Got map! Finding routes...");
+              $("#send").prop('disabled', false);
+              origins = (useStoplights ? data["local_maxima"].
+                concat(data["stoplights"]) : data["local_maxima"]);
+              var paths = [];
+              var maxVels = [];
+              // TODO: Sort origins?
+              origins.forEach(function(origin) {
+                // actual for loop is faster lol
+                var newPathsAndMaxes = findPaths(
+                  origin, startSpeed, [], startSpeed
+                  );
+                // console.log(findPaths)
+                // console.log(newPathsAndMaxes[0])
+                // console.log(newPathsAndMaxes[1])
+                paths.concat(newPathsAndMaxes[0]);
+                maxVels.concat(newPathsAndMaxes[1]);
+              });
+
+              // $("#result-container").html("<h3>Route1</h3>"
+              //  + "<div>lol</div>"
+              //  + "<h3>Route2</h3>"
+              //  + "<div>kek</div>");
+              $("#status").html("Found routes.");
             }
           });
           //console.log(rectBounds);
-        })
+        });
       })
+      function generateFindPaths() {
+        function findPaths(start, vel, path, maxVel) {
+          console.log()
+          if (
+            vel == 0
+            || (useStoplights && stoplights.indexOf(start) != -1 && path.length > 1)
+            || !(graph[start].some(function(neighbor) {
+              return path.indexOf(neighbor) != -1;
+              }))
+            ) {
+            return [[path], [maxVel]];
+          }
+          var paths = []
+          var maxVels = []
+          graph[start].forEach(function(neighbor) {
+            if (path.indexOf(neighbor) != -1) {
+              var velAndMaxVel = rideDownNode(start, neighbor, vel, maxVel);
+              var newPathsAndNewMaxes = findPaths(
+                neighbor, velAndMaxVel[0], path, velAndMaxVel[1]
+                );
+              paths.concat(newPathsAndMaxes[0]);
+              maxVels.concat(newPathsAndMaxes[1]);
+            }
+          });
+          return [paths, maxVels];
+        }
+        return findPaths;
+      }
+      function rideDownNode(src, dest, vel, maxVel) {
+        if (vel > maxVel) {
+          maxVel = vel;
+        }
+        var distInternode = latLng2Dist(
+          nodeLatLongs[src][0],
+          nodeLatLongs[src][1],
+          nodeLatLongs[dest][0],
+          nodeLatLongs[dest][1]
+          );
+        var dist = distInternode / edgeHeights["(" + src + ", " + dest + ")"].length;
+        var edge = edgeHeights["(" + src + ", " + dest + ")"];
+        for (var i = 1, len = edge.length; i < len; i++) {
+          dh = edge[i] - edge[i - 1];
+          vel = newVelocity(vel, dh, dist);
+          if (vel > maxVel) {
+            maxVel = vel;
+          }
+          if (vel == 0) { // Crossing fingers on float precision
+            break;
+          }
+        }
+
+      }
+
+      function latLng2Dist(lat1Raw, lng1Raw, lat2Raw, lng2Raw) {
+        // This thing assumes the earth is spherical, which I think
+        // hurts us less than the float -> decimal -> float conversion
+        // that we're dealing with in JSON :/
+        // The decimal is only accurate to .000001 deg ~ 1.1 m :'(
+        var lat1 = lat1Raw * Math.PI / 180;
+        // Original Python converts raw to float... IDK if we need to.
+        var lng1 = lng1Raw * Math.PI / 180;
+        var lat2 = lat2Raw * Math.PI / 180;
+        var lng2 = lng2Raw * Math.PI / 180;
+        // Radius of earth in meters, could use more precision if we
+        // can figure it out for the US average.
+        var radius = 6373000.0;
+        var dlng = lng2 - lng1;
+        var dlat = lat2 - lat1;
+        var a = (Math.pow(Math.sin(dlat / 2), 2) + Math.cos(lat1)
+          * Math.cos(lat2) * Math.sin(Math.pow(dlng / 2), 2));
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        var distance = R * c;
+        return distance;
+      }
+
+      // Constants, probably to be modded by UI onclick
+      var g = -9.81 // accelertion due to gravity, m/s
+      var dragC = .6 // drag coefficient of human body
+      var crossA = .68 // Cross-sectional area of human body
+      var mass = 80 // kg
+      var frictC = .03 // Coefficient of friction
+
+      function newVelocity(v0, dh, dist) {
+        if (v0 == 0) {
+          return 0;
+        }
+        var theta = Math.atan2(dh, dist);
+        var a = (
+          g * Math.sin(theta)
+          - (1.225 * dragC * crossA * v0 * v0) / (2 * mass)
+          + (g * frictC * Math.cos(theta))
+          );
+        // Total Acceleration = grav, air resistance, rolling friction resistance
+        // Assumes final velocity causes about the amount of air resistance as
+        // inital velocity TODO: Make more classically perfect by integrating
+        velSquared = 2 * a * Math.sqrt(dist * dist + dh * dh) + v0 * v0;
+        if (velSquared > 0) {
+          return Math.sqrt(velSquared);
+        }
+        return 0;
+      }
     </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEiw0TtVlGhptMnW6UKV6KUsK6Svt3a3w&libraries=places&callback=initAutocomplete"
+         async defer></script>
+
+
+  </head>
+  <body>
+    <button id="send">Send the shit!</button><br>
+    <input type="checkbox" id="stoplights">Stop at Stoplights<br>
+    Starting speed, meters per second:
+    <input type="text" id="startSpeed" value="1" style="width: 20em;"><br>
+    <input id="pac-input" class="controls" type="text" placeholder="Search Box">
+    <div id="map-container">
+      <div id="map"></div>
+    </div>
+    <div id="status-container">
+      <p id="status"></p>
+    </div>
+    <div id="result-container"></div>
+
   </body>
 </html>

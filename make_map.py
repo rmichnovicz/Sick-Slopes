@@ -43,12 +43,22 @@ def get_node_entries(target_nodes, map_data):
             yield (item["data"]["id"], item)
 
 def make_map(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
-                        # (left, down, right, up)
+                        # (west, south, east, north)
 
     api_link = osmapi.OsmApi(#username='evanxq1@gmail.com',
                              #password='hrVQ*DO9aD9q'#,
                              #api="api06.dev.openstreetmap.org"
                              )
+
+    querypath = 'queryresults/' + str(mapsize) + '.dat'
+    try:
+        if os.path.exists(querypath):
+            print('opening query result...')
+            with open(querypath, 'rb') as f:
+                q = pickle.load(f)
+                return q[0], q[1], q[2], q[3], q[4], q[5], q[6]
+    except IOError as e:
+            print("Couldn't read query data!", e.errorno, e.strerror)
 
     mapfilepath = 'maps/map'+str(mapsize)+'.dat'
 
@@ -69,6 +79,8 @@ def make_map(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
 
     except: # osmapi.OsmApi.MaximumRetryLimitReachedError:  #TODO: handle errors
         print("Could not get map data!")
+        return False, [], [], [], [], [], []
+
 
 
     #with open('log/map_data_example.txt','w') as f:
@@ -144,8 +156,18 @@ def make_map(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
     #maxima_by_elevation = sorted(list(local_maxima), key=lambda n: node_heights[n])
     print('Found', len(local_maxima), 'local maxima')
 
-    return list(stoplights), list(local_maxima), graph, node_heights, node_latlons, edge_heights
-    # list, set, dict, dict, dict
+    try:
+        print('writing query result...')
+        with open(querypath, 'wb') as f:
+            q = pickle.dump([True, list(stoplights), list(local_maxima), graph, \
+                node_heights, node_latlons, edge_heights], f)
+    except IOError as e:
+            print("Couldn't read query data!", e.errorno, e.strerror)
+
+
+    return True, list(stoplights), list(local_maxima), graph, \
+        node_heights, node_latlons, edge_heights
+    # Success, data
 if __name__ == '__main__':
     find_hills()
 
