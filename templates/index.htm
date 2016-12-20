@@ -230,8 +230,8 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
                 // console.log(findPaths)
                 // console.log(newPathsAndMaxes[0])
                 // console.log(newPathsAndMaxes[1])
-                paths.concat(newPathsAndMaxes[0]);
-                maxVels.concat(newPathsAndMaxes[1]);
+                paths = paths.concat(newPathsAndMaxes[0]);
+                maxVels = maxVels.concat(newPathsAndMaxes[1]);
               });
               console.log(paths); console.log(maxVels);
               // $("#result-container").html("<h3>Route1</h3>"
@@ -246,6 +246,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       })
       function generateFindPaths() {
         function findPaths(start, vel, path, maxVel) {
+          path.push(start);
           if (
             vel == 0
             || (useStoplights && stoplights.indexOf(start) != -1 && path.length > 1)
@@ -264,11 +265,11 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
               var newPathsAndNewMaxes = findPaths(
                 neighbor, velAndMaxVel[0], path, velAndMaxVel[1]
                 );
-              paths.concat(newPathsAndNewMaxes[0]);
-              maxVels.concat(newPathsAndNewMaxes[1]);
+              paths = paths.concat(newPathsAndNewMaxes[0]);
+              maxVels = maxVels.concat(newPathsAndNewMaxes[1]);
             }
           };
-          console.log(paths);
+          // console.log(paths);
           return [paths, maxVels];
         }
         return findPaths;
@@ -291,7 +292,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           if (vel > maxVel) {
             maxVel = vel;
           }
-          if (vel == 0) { // Crossing fingers on float precision
+          if (vel == 0) {
             break;
           }
         }

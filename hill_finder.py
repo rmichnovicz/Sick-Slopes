@@ -84,9 +84,9 @@ def get_elevations_by_coords(lats, lngs):
     queries = dict()
     for lat, lng in zip(lats, lngs):
         fname = ('grd' + ('n' if lat>0 else 's')
-                 + str(math.ceil(abs(lat))).zfill(2)
+                 + str(int(math.ceil(abs(lat)))).zfill(2)
                  + ('e' if lng>0 else 'w')
-                 + str(math.ceil(abs(lng))).zfill(3)
+                 + str(int(math.ceil(abs(lng)))).zfill(3)
                  )
 
         s = str(lng) + ' ' + str(lat) + '\n'
@@ -292,7 +292,7 @@ def find_hills(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
     originz = sorted(local_maxima)
     for origin in range(len(originz)):
         print("plugging in", origin)
-        new_paths, new_maxes = find_the_paths(originz[origin], 1.0, [])
+        new_paths, new_maxes = find_all_paths(originz[origin], 1.0, [])
         # print ("Adding ", new_paths)
         # replacedinput
         paths += new_paths
