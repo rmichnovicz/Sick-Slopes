@@ -213,7 +213,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
               console.log(data);
               graph = data["graph"];
               stoplights = data["stoplights"]
-              nodeLatLongs = data["node_latlongs"];
+              nodeLatLongs = data["node_latlons"];
               edgeHeights = data["edge_heights"];
               $("#status").html("Got map! Finding routes...");
               $("#send").prop('disabled', false);
@@ -233,7 +233,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
                 paths.concat(newPathsAndMaxes[0]);
                 maxVels.concat(newPathsAndMaxes[1]);
               });
-
+              console.log(paths); console.log(maxVels);
               // $("#result-container").html("<h3>Route1</h3>"
               //  + "<div>lol</div>"
               //  + "<h3>Route2</h3>"
@@ -246,28 +246,29 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       })
       function generateFindPaths() {
         function findPaths(start, vel, path, maxVel) {
-          console.log()
           if (
             vel == 0
             || (useStoplights && stoplights.indexOf(start) != -1 && path.length > 1)
             || !(graph[start].some(function(neighbor) {
-              return path.indexOf(neighbor) != -1;
-              }))
+              return path.indexOf(neighbor) == -1;
+              })) // TODO check if correct
             ) {
             return [[path], [maxVel]];
           }
           var paths = []
           var maxVels = []
-          graph[start].forEach(function(neighbor) {
-            if (path.indexOf(neighbor) != -1) {
+          for(var i = 0, len = (graph[start]).length; i < len; i++) {
+            var neighbor = graph[start][i];
+            if (path.indexOf(neighbor) == -1) {
               var velAndMaxVel = rideDownNode(start, neighbor, vel, maxVel);
               var newPathsAndNewMaxes = findPaths(
                 neighbor, velAndMaxVel[0], path, velAndMaxVel[1]
                 );
-              paths.concat(newPathsAndMaxes[0]);
-              maxVels.concat(newPathsAndMaxes[1]);
+              paths.concat(newPathsAndNewMaxes[0]);
+              maxVels.concat(newPathsAndNewMaxes[1]);
             }
-          });
+          };
+          console.log(paths);
           return [paths, maxVels];
         }
         return findPaths;
@@ -294,7 +295,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
             break;
           }
         }
-
+        return [vel, maxVel];
       }
 
       function latLng2Dist(lat1Raw, lng1Raw, lat2Raw, lng2Raw) {
@@ -312,10 +313,10 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         var radius = 6373000.0;
         var dlng = lng2 - lng1;
         var dlat = lat2 - lat1;
-        var a = (Math.pow(Math.sin(dlat / 2), 2) + Math.cos(lat1)
-          * Math.cos(lat2) * Math.sin(Math.pow(dlng / 2), 2));
+        var a = (Math.sin(dlat / 2) * Math.sin(dlat / 2) + Math.cos(lat1)
+          * Math.cos(lat2) * Math.sin(Math.pow(dlng / 2, 2)));
         var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        var distance = R * c;
+        var distance = radius * c;
         return distance;
       }
 
