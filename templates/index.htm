@@ -95,6 +95,9 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       var stoplights;
       var useStoplights;
       var nodeLatLongs;
+      var maxesAndPaths;
+      var polyline;
+      // var sortedMaxesAndPaths = [];
 
       function initAutocomplete() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -184,13 +187,16 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
 
         // Define an info window on the map.
         infoWindow = new google.maps.InfoWindow();
+        polyline = new google.maps.Polyline({
+          strokeColor: '#FF0000',
+          strokeOpacity: 1.0,
+          strokeWeight: 2
+        });
+        polyline.setMap(map);
+        // polyline.setPath([{lat: 33.7874, lng: -84.3812}, {lat: 33.7677, lng: -84.4203}])
       }
 
       $(document).ready(function() {
-
-        $("#result-container").accordion({
-          heightStyle: "content"
-        });
 
         $("#send").click(function() {
           var rectBounds = rectangle.getBounds().toJSON();
@@ -223,7 +229,8 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
               var maxVels = [];
               // TODO: Sort origins?
               origins.forEach(function(origin) {
-                // actual for loop is faster lol
+                // forEach is not async, thank god
+                // actual for loop is faster lol; I don't think it matters
                 var newPathsAndMaxes = findPaths(
                   origin, startSpeed, [], startSpeed
                   );
@@ -233,16 +240,58 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
                 paths = paths.concat(newPathsAndMaxes[0]);
                 maxVels = maxVels.concat(newPathsAndMaxes[1]);
               });
-              console.log(paths); console.log(maxVels);
-              // $("#result-container").html("<h3>Route1</h3>"
-              //  + "<div>lol</div>"
-              //  + "<h3>Route2</h3>"
-              //  + "<div>kek</div>");
+              maxesAndPaths = {};
+              if (paths.length != maxVels.length) {
+                console.log("Something's gone horribly wrong." +
+                  " Paths is " + paths.length + " long and maxVels is " +
+                  maxVels.length + "long.");
+              }
+              for (var i = 0, len = paths.length; i < len; i++) {
+                if (maxesAndPaths[maxVels[i]] == undefined) {
+                  maxesAndPaths[maxVels[i]] = [paths[i]];
+                } else {
+                  maxesAndPaths[maxVels[i]] =
+                    maxesAndPaths[maxVels[i]].concat([paths[i]]);
+                }
+              }
+              var sortedMaxes = Object.keys(maxesAndPaths).sort(function (a, b) {
+                return (parseFloat(b) - parseFloat(a));
+              })
+              console.log(sortedMaxes);
+              var resultContent = "";
+              for (var i = 0, len = sortedMaxes.length; i < len; i++) {
+                resultContent += "<h3>" + sortedMaxes[i] + "m/s </h3>"
+                for (var j = 0, len2 = maxesAndPaths[sortedMaxes[i]].length;
+                  j < len2; j++) {
+                  resultContent +=
+                    "<div class='path' data-max='" +
+                    sortedMaxes[i] + "' data-iteration=" + j + ">Path " +
+                    j + "</div>";
+                }
+
+              }
+              $("#result-container").html(resultContent);
               $("#status").html("Found routes.");
+              // $("#result-container").accordion({
+              //   heightStyle: "content"
+              // });
             }
           });
+          return false; //recommended by tutsplus for some reason
+          // https://code.tutsplus.com/tutorials/10-ways-to-instantly-increase-your-jquery-performance--net-5551
           //console.log(rectBounds);
         });
+        $("#result-container").on("click", ".path", function() {
+          var path = maxesAndPaths[$(this).data("max")][$(this).data("iteration")];
+          var googlePath = [];
+          for (var i = 0, len = path.length; i < len; i++) {
+            googlePath.push({
+              lat: nodeLatLongs[path[i]][0],
+              lng: nodeLatLongs[path[i]][1]
+            });
+            polyline.setPath(googlePath);
+          }
+        })
       })
       function generateFindPaths() {
         function findPaths(start, vel, path, maxVel) {

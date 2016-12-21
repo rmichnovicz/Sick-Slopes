@@ -306,8 +306,8 @@ def find_hills(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
 
     print('Simulated', edge_sim_count, 'edges')
 
-    # for v, p in vels_and_paths[:5]:
-    #     print('max vel', v, 'path', p)
+    for v, p in vels_and_paths[:5]:
+        print('max vel', v, 'path', p)
 
     bestvel, bestpath = vels_and_paths[0]
     #print("Best velocity:", bestvel)#, "\nFrom ", vels_and_paths[0])
@@ -321,8 +321,8 @@ def find_hills(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
     #         break
     # end test
 
-    for i, vp in enumerate(vels_and_paths[:200]):
-        print('%2d. %d -> %f (%d)' % (i, vp[1][0], vp[0], len(vp[1])))
+    # for i, vp in enumerate(vels_and_paths[:200]):
+    #     print('%2d. %d -> %f (%d)' % (i, vp[1][0], vp[0], len(vp[1])))
 
     import mapview_creator
     coord_path = [node_latlons[n] for n in bestpath]
