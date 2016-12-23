@@ -87,17 +87,24 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
       var map;
       var postURL = "localhost";
+      // Recieved data and parts
       var data;
       var graph;
       var origins;
       var results;
       var edgeHeights;
-      var stoplights;
-      var useStoplights;
       var nodeLatLongs;
+      var stoplights;
+      // Settings chosen from map
+      var useStoplights;
+      // Results from JS mess
       var maxesAndPaths;
+      var sortedMaxes;
+      // Stuff on map and for buttons
       var polyline;
       var marker;
+      var mapIteration;
+      var mapVelocity;
       // var sortedMaxesAndPaths = [];
 
       function initAutocomplete() {
@@ -261,7 +268,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
                     maxesAndPaths[maxVels[i]].concat([paths[i]]);
                 }
               }
-              var sortedMaxes = Object.keys(maxesAndPaths).sort(function (a, b) {
+              sortedMaxes = Object.keys(maxesAndPaths).sort(function (a, b) {
                 return (parseFloat(b) - parseFloat(a));
               }) // TODO change b to nodeHeights(b)
               console.log(sortedMaxes);
@@ -290,9 +297,57 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         });
         $("#result-container").on("click", ".path", function() {
           var path = maxesAndPaths[$(this).data("max")][$(this).data("iteration")];
-          showPath(path);
-        })
-      })
+          showPath(path, $(this).data("max"));
+          mapIteration = $(this).data("iteration");
+          mapVelocity = $(this).data("max");
+          updateButtons();
+        });
+        $("#skip-back").click(function() {
+          mapIteration = 0;
+          mapVelocity = sortedMaxes[sortedMaxes.indexOf(mapVelocity) - 1]
+          showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
+          updateButtons();
+        });
+        $("#back").click(function() {
+          mapIteration -= 1;
+          showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
+          updateButtons();
+        });
+        $("#forward").click(function() {
+          mapIteration += 1;
+          showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
+          updateButtons();
+        });
+        $("#skip-forward").click(function() {
+          mapIteration = 0;
+          mapVelocity = sortedMaxes[sortedMaxes.indexOf(mapVelocity) + 1]
+          showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
+          updateButtons();
+        });
+      });
+      function updateButtons() {
+        if (mapVelocity == sortedMaxes[0]) {
+          $("#skip-back").prop('disabled', true);
+        } else {
+          $("#skip-back").prop('disabled', false);
+        }
+        if (mapIteration == 0) {
+          $("#back").prop('disabled', true);
+        } else {
+          $("#back").prop('disabled', false);
+        }
+        if (mapIteration == maxesAndPaths[mapVelocity][mapIteration].length - 1)
+        {
+          $("#forward").prop('disabled', true);
+        } else {
+          $("#forward").prop('disabled', false);
+        }
+        if (mapIteration == sortedMaxes.length - 1) {
+          $("#skip-forward").prop('disabled', true);
+        } else {
+          $("#skip-forward").prop('disabled', false);
+        }
+      }
       function generateFindPaths() {
         function findPaths(start, vel, path, maxVel) {
           path.push(start);
@@ -440,6 +495,12 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     </div>
     <div id="status-container">
       <p id="status"></p>
+    </div>
+    <div id="buttons">
+      <button id="skip-back">⏮</button>
+      <button id="back">◀</button>
+      <button id="forward">▶</button>
+      <button id="skip-forward">⏭</button>
     </div>
     <div id="maxVel-container"></div>
     <div id="result-container"></div>
