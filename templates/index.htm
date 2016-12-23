@@ -97,6 +97,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       var nodeLatLongs;
       var maxesAndPaths;
       var polyline;
+      var marker;
       // var sortedMaxesAndPaths = [];
 
       function initAutocomplete() {
@@ -188,11 +189,16 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         // Define an info window on the map.
         infoWindow = new google.maps.InfoWindow();
         polyline = new google.maps.Polyline({
+          map: map,
           strokeColor: '#FF0000',
           strokeOpacity: 1.0,
           strokeWeight: 2
         });
-        polyline.setMap(map);
+        marker = new google.maps.Marker({
+          map: map,
+          title: "Start of path"
+        })
+        // polyline.setMap(map);
         // polyline.setPath([{lat: 33.7874, lng: -84.3812}, {lat: 33.7677, lng: -84.4203}])
       }
 
@@ -228,9 +234,10 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
               var paths = [];
               var maxVels = [];
               // TODO: Sort origins?
-              origins.forEach(function(origin) {
+              for (var i = 0, len = origins.length; i < len; i++) { // TODO len
                 // forEach is not async, thank god
                 // actual for loop is faster lol; I don't think it matters
+                origin = origins[i]
                 var newPathsAndMaxes = findPaths(
                   origin, startSpeed, [], startSpeed
                   );
@@ -239,7 +246,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
                 // console.log(newPathsAndMaxes[1])
                 paths = paths.concat(newPathsAndMaxes[0]);
                 maxVels = maxVels.concat(newPathsAndMaxes[1]);
-              });
+              };
               maxesAndPaths = {};
               if (paths.length != maxVels.length) {
                 console.log("Something's gone horribly wrong." +
@@ -256,7 +263,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
               }
               var sortedMaxes = Object.keys(maxesAndPaths).sort(function (a, b) {
                 return (parseFloat(b) - parseFloat(a));
-              })
+              }) // TODO change b to nodeHeights(b)
               console.log(sortedMaxes);
               var resultContent = "";
               for (var i = 0, len = sortedMaxes.length; i < len; i++) {
@@ -283,14 +290,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         });
         $("#result-container").on("click", ".path", function() {
           var path = maxesAndPaths[$(this).data("max")][$(this).data("iteration")];
-          var googlePath = [];
-          for (var i = 0, len = path.length; i < len; i++) {
-            googlePath.push({
-              lat: nodeLatLongs[path[i]][0],
-              lng: nodeLatLongs[path[i]][1]
-            });
-            polyline.setPath(googlePath);
-          }
+          showPath(path);
         })
       })
       function generateFindPaths() {
@@ -307,12 +307,21 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           }
           var paths = []
           var maxVels = []
+          var neighbors = graph[start];
+          // neighbors.sort(function(a, b) {
+          //   return b - a; // b = slope start to b, a = slope start to a (use edge heights)
+          // })
+          var found = 0;
           for(var i = 0, len = (graph[start]).length; i < len; i++) {
+            if (found > 1) {
+              break;
+            }
             var neighbor = graph[start][i];
             if (path.indexOf(neighbor) == -1) {
+              found ++;
               var velAndMaxVel = rideDownNode(start, neighbor, vel, maxVel);
               var newPathsAndNewMaxes = findPaths(
-                neighbor, velAndMaxVel[0], path, velAndMaxVel[1]
+                neighbor, velAndMaxVel[0], path.slice(), velAndMaxVel[1]
                 );
               paths = paths.concat(newPathsAndNewMaxes[0]);
               maxVels = maxVels.concat(newPathsAndNewMaxes[1]);
@@ -396,6 +405,24 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         }
         return 0;
       }
+      function showPath(path, maxVel) {
+        $("#maxVel-container").html("Max Velocity: " + maxVel);
+        var googlePath = [];
+        for (var i = 0, len = path.length; i < len; i++) {
+          googlePath.push({
+            lat: nodeLatLongs[path[i]][0],
+            lng: nodeLatLongs[path[i]][1]
+          });
+          // if (i < len-1) {
+          //   console.log(path[i + 1] in graph[path[i]]);
+          // }
+        }
+        polyline.setPath(googlePath);
+        marker.setPosition({
+          lat: nodeLatLongs[path[0]][0],
+          lng: nodeLatLongs[path[0]][1]
+        });
+      }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEiw0TtVlGhptMnW6UKV6KUsK6Svt3a3w&libraries=places&callback=initAutocomplete"
          async defer></script>
@@ -414,6 +441,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     <div id="status-container">
       <p id="status"></p>
     </div>
+    <div id="maxVel-container"></div>
     <div id="result-container"></div>
 
   </body>
