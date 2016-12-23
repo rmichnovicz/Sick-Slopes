@@ -285,6 +285,10 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
 
               }
               $("#result-container").html(resultContent);
+              mapIteration = 0; // Index 0
+              mapVelocity = sortedMaxes[0]; // Show fastest path first
+              showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
+              updateButtons();
               $("#status").html("Found routes.");
               // $("#result-container").accordion({
               //   heightStyle: "content"
@@ -302,6 +306,12 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           mapVelocity = $(this).data("max");
           updateButtons();
         });
+
+        $("#skip-back").prop('disabled', true);
+        $("#back").prop('disabled', true);
+        $("#forward").prop('disabled', true);
+        $("#skip-forward").prop('disabled', true);
+
         $("#skip-back").click(function() {
           mapIteration = 0;
           mapVelocity = sortedMaxes[sortedMaxes.indexOf(mapVelocity) - 1]
@@ -400,7 +410,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         var dist = distInternode / edgeHeights["(" + src + ", " + dest + ")"].length;
         var edge = edgeHeights["(" + src + ", " + dest + ")"];
         for (var i = 1, len = edge.length; i < len; i++) {
-          dh = edge[i] - edge[i - 1];
+          var dh = edge[i] - edge[i - 1];
           vel = newVelocity(vel, dh, dist);
           if (vel > maxVel) {
             maxVel = vel;
@@ -454,7 +464,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         // Total Acceleration = grav, air resistance, rolling friction resistance
         // Assumes final velocity causes about the amount of air resistance as
         // inital velocity TODO: Make more classically perfect by integrating
-        velSquared = 2 * a * Math.sqrt(dist * dist + dh * dh) + v0 * v0;
+        var velSquared = 2 * a * Math.sqrt(dist * dist + dh * dh) + v0 * v0;
         if (velSquared > 0) {
           return Math.sqrt(velSquared);
         }
