@@ -386,13 +386,13 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           var maxVels = []
           var neighbors = graph[start];
           // neighbors.sort(function(a, b) {
-          //   return b - a; // b = slope start to b, a = slope start to a (use edge heights)
+          //   return b - a; // b = slope start to b, a = slope start to a (use edge heights) // TODO: finish writing this sorting method
           // })
           var found = 0;
           for(var i = 0, len = (graph[start]).length; i < len; i++) {
-            if (found > maxPaths) {
-              break;
-            }
+            if (found > maxPaths) {  // right now, maxPaths == 1
+              break;                 // TODO: Figure out why a lot of results
+            }                        // still go in multiple directions
             var neighbor = graph[start][i];
             if (path.indexOf(neighbor) == -1) {
               found ++;
@@ -520,15 +520,16 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     <div id="map-container">
       <div id="map"></div>
     </div>
-    <div id="status-container">
-      <p id="status"></p>
-    </div>
     <div id="buttons">
       <button id="skip-back">⏮</button>
       <button id="back">◀</button>
       <button id="forward">▶</button>
       <button id="skip-forward">⏭</button>
     </div>
+    <div id="status-container">
+      <p id="status"></p>
+    </div>
+    <div id="share"></div>
     <div id="maxVel-container"></div>
     <div id="result-container"></div>
 
