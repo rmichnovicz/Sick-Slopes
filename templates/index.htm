@@ -105,6 +105,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       var marker;
       var mapIteration;
       var mapVelocity;
+      var maxPaths;
       // var sortedMaxesAndPaths = [];
 
       function initAutocomplete() {
@@ -218,6 +219,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           if (startSpeed == NaN) {
             startSpeed = 1.0;
           }
+          maxPaths = 1; //parseInt($("maxPaths").val())
           var findPaths = generateFindPaths()
           $("#send").prop('disabled', true);
           $("#status").html("Getting Map...");
@@ -289,6 +291,8 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
               mapVelocity = sortedMaxes[0]; // Show fastest path first
               showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
               updateButtons();
+              $("#hide-rectangle").prop('checked', true);
+              rectangle.setMap(null);
               $("#status").html("Found routes.");
               // $("#result-container").accordion({
               //   heightStyle: "content"
@@ -306,6 +310,14 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           mapVelocity = $(this).data("max");
           updateButtons();
         });
+
+        $("#hide-rectangle").change(function() {
+          if ($(this).prop("checked")) {
+            rectangle.setMap(null);
+          } else {
+            rectangle.setMap(map);
+          }
+        })
 
         $("#skip-back").prop('disabled', true);
         $("#back").prop('disabled', true);
@@ -346,13 +358,13 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         } else {
           $("#back").prop('disabled', false);
         }
-        if (mapIteration == maxesAndPaths[mapVelocity][mapIteration].length - 1)
+        if (mapIteration >= maxesAndPaths[mapVelocity].length - 1)
         {
           $("#forward").prop('disabled', true);
         } else {
           $("#forward").prop('disabled', false);
         }
-        if (mapIteration == sortedMaxes.length - 1) {
+        if (mapIteration >= sortedMaxes.length - 1) {
           $("#skip-forward").prop('disabled', true);
         } else {
           $("#skip-forward").prop('disabled', false);
@@ -378,7 +390,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           // })
           var found = 0;
           for(var i = 0, len = (graph[start]).length; i < len; i++) {
-            if (found > 1) {
+            if (found > maxPaths) {
               break;
             }
             var neighbor = graph[start][i];
@@ -487,6 +499,10 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           lat: nodeLatLongs[path[0]][0],
           lng: nodeLatLongs[path[0]][1]
         });
+        map.setCenter({
+          lat: nodeLatLongs[path[0]][0],
+          lng: nodeLatLongs[path[0]][1]
+        });
       }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEiw0TtVlGhptMnW6UKV6KUsK6Svt3a3w&libraries=places&callback=initAutocomplete"
@@ -499,6 +515,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     <input type="checkbox" id="stoplights">Stop at Stoplights<br>
     Starting speed, meters per second:
     <input type="text" id="startSpeed" value="1" style="width: 20em;"><br>
+    <input type="checkbox" id="hide-rectangle">Hide rectangle on map
     <input id="pac-input" class="controls" type="text" placeholder="Search Box">
     <div id="map-container">
       <div id="map"></div>
