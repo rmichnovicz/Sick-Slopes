@@ -219,7 +219,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           if (startSpeed == NaN) {
             startSpeed = 1.0;
           }
-          maxPaths = 1; //parseInt($("maxPaths").val())
+          maxPaths = 2; //parseInt($("maxPaths").val())
           var findPaths = generateFindPaths()
           $("#send").prop('disabled', true);
           $("#status").html("Getting Map...");
@@ -297,6 +297,12 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
               // $("#result-container").accordion({
               //   heightStyle: "content"
               // });
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+              $("#status").html(
+                "Server Error " + textStatus + " " + errorThrown
+                );
+              $("#send").prop("disabled", false)
             }
           });
           return false; //recommended by tutsplus for some reason
@@ -371,7 +377,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         }
       }
       function generateFindPaths() {
-        function findPaths(start, vel, path, maxVel) {
+        function findPathsRecursive(start, vel, path, maxVel) {
           path.push(start);
           if (
             vel == 0
@@ -385,19 +391,16 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           var paths = []
           var maxVels = []
           var neighbors = graph[start];
-          // neighbors.sort(function(a, b) {
-          //   return b - a; // b = slope start to b, a = slope start to a (use edge heights) // TODO: finish writing this sorting method
-          // })
-          var found = 0;
-          for(var i = 0, len = (graph[start]).length; i < len; i++) {
-            if (found > maxPaths) {  // right now, maxPaths == 1
-              break;                 // TODO: Figure out why a lot of results
-            }                        // still go in multiple directions
-            var neighbor = graph[start][i];
+          // neighbors.sort(sortBySlopeReversed(start, a, b)) // TODO enable
+          for(
+            var i = 0, len = neighbors.length, found = 0;
+            found < maxPaths && i < len;
+            i++) {
+            var neighbor = neighbors[i];
             if (path.indexOf(neighbor) == -1) {
               found ++;
               var velAndMaxVel = rideDownNode(start, neighbor, vel, maxVel);
-              var newPathsAndNewMaxes = findPaths(
+              var newPathsAndNewMaxes = findPathsRecursive(
                 neighbor, velAndMaxVel[0], path.slice(), velAndMaxVel[1]
                 );
               paths = paths.concat(newPathsAndNewMaxes[0]);
@@ -407,7 +410,117 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           // console.log(paths);
           return [paths, maxVels];
         }
-        return findPaths;
+        function findPathsBreadthFirst(start, vel, path, maxVel) {
+          var pathsToReturn = [];
+          var maxVelsToReturn = [];
+          var pathsToExtend = [[start]];
+          var maxVels = [maxVel]
+          var vels = [vel]
+          while (pathsToExtend.length != 0) {
+            var pathToExtend = pathsToExtend.shift(); // Remove & return arr[0]
+            var pathsMaxVel = maxVels.shift(); // all are pop in df
+            var pathsVel = vels.shift();
+            var start = pathToExtend[pathToExtend.length - 1];
+            var neighbors = graph[start];
+            // neighbors.sort(sortBySlope(start, a, b)) // TODO enable // DF reverse
+            for(
+              var i = 0, len = neighbors.length, found = 0;
+              found < maxPaths && i < len;
+              i++)
+            {
+              var neighbor = neighbors[i];
+              var newPath = pathToExtend.concat(neighbor);
+              if (pathToExtend.indexOf(neighbor) == -1) {
+                found ++;
+                var velAndMaxVel =
+                  rideDownNode(start, neighbor, pathsVel, pathsMaxVel);
+                if (
+                  velAndMaxVel[0] == 0
+                  || (useStoplights
+                    && stoplights.indexOf(neighbor) != -1 // TODO make less stupid
+                    && newPath.length > 1)
+                  || !(graph[neighbor].some(function(otherNeighbor) {
+                    return newPath.indexOf(otherNeighbor) == -1;
+                    })) // TODO check if correct
+                  )
+                {
+                  pathsToReturn.push(newPath);
+                  maxVelsToReturn.push(velAndMaxVel[1]);
+                } else {
+                  pathsToExtend.push(newPath);
+                  vels.push(velAndMaxVel[0]);
+                  maxVels.push(velAndMaxVel[1]);
+                }
+              }
+            }
+          }
+          return [pathsToReturn, maxVelsToReturn];
+          // TODO test
+        }
+        function findPathsDepthFirst(start, vel, path, maxVel) {
+          var pathsToReturn = [];
+          var maxVelsToReturn = [];
+          var pathsToExtend = [[start]];
+          var maxVels = [maxVel]
+          var vels = [vel]
+          while (pathsToExtend.length != 0) {
+            var pathToExtend = pathsToExtend.pop();
+            var pathsMaxVel = maxVels.pop();
+            var pathsVel = vels.pop();
+            var start = pathToExtend[pathToExtend.length - 1];
+            var neighbors = graph[start];
+            // neighbors.sort(sortBySlopeReversed(start, a, b)) // TODO enable
+            for(
+              var i = 0, len = neighbors.length, found = 0;
+              found < maxPaths && i < len;
+              i++)
+            {
+              var neighbor = neighbors[i];
+              var newPath = pathToExtend.concat(neighbor);
+              if (pathToExtend.indexOf(neighbor) == -1) {
+                found ++;
+                var velAndMaxVel =
+                  rideDownNode(start, neighbor, pathsVel, pathsMaxVel);
+                if (
+                  velAndMaxVel[0] == 0
+                  || (useStoplights
+                    && stoplights.indexOf(neighbor) != -1 // TODO make less stupid
+                    && newPath.length > 1)
+                  || !(graph[neighbor].some(function(otherNeighbor) {
+                    return newPath.indexOf(otherNeighbor) == -1;
+                    })) // TODO check if correct
+                  )
+                {
+                  pathsToReturn.push(newPath);
+                  maxVelsToReturn.push(velAndMaxVel[1]);
+                } else {
+                  pathsToExtend.push(newPath);
+                  vels.push(velAndMaxVel[0]);
+                  maxVels.push(velAndMaxVel[1]);
+                }
+              }
+            }
+          }
+          return [pathsToReturn, maxVelsToReturn];
+          // TODO test
+        }
+        searchMethod = $("#search-method").val()
+        if (searchMethod == "recursive") {
+          return findPathsRecursive;
+        }
+        if (searchMethod == "depth-first") {
+          return findPathsDepthFirst;
+        }
+        if (searchMethod == "breadth-first") {
+          return findPathsBreadthFirst;
+        }
+        return findPathsBreadthFirst; // should never run
+      }
+      function sortBySlope(start, a, b) {
+        // TODO
+      }
+      function sortBySlopeReversed(start, a, b) {
+        return b - a; // TODO
       }
       function rideDownNode(src, dest, vel, maxVel) {
         if (vel > maxVel) {
@@ -514,17 +627,23 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     <button id="send">Send the shit!</button><br>
     <input type="checkbox" id="stoplights">Stop at Stoplights<br>
     Starting speed, meters per second:
-    <input type="text" id="startSpeed" value="1" style="width: 20em;"><br>
-    <input type="checkbox" id="hide-rectangle">Hide rectangle on map
+    <input type="text" id="startSpeed" value="1" style="width: 5em;"><br>
+    <input type="checkbox" id="hide-rectangle">Hide rectangle on map<br>
+    Search method:
+    <select id="search-method">
+      <option value="recursive">Recursive Depth-First</option>
+      <option value="depth-first">Iterative Depth-First</option>
+      <option value="breadth-first">Iterative Breadth-First</option>
+    </select>
     <input id="pac-input" class="controls" type="text" placeholder="Search Box">
     <div id="map-container">
       <div id="map"></div>
     </div>
     <div id="buttons">
-      <button id="skip-back">⏮</button>
-      <button id="back">◀</button>
-      <button id="forward">▶</button>
-      <button id="skip-forward">⏭</button>
+      <button id="skip-back" title="Paths with higher peak velocity">⏮</button>
+      <button id="back" title="Previous path with this peak velocity">◀</button>
+      <button id="forward" title="Next Path with this peak velocity">▶</button>
+      <button id="skip-forward" title="Paths with lower peak velocity">⏭</button>
     </div>
     <div id="status-container">
       <p id="status"></p>
