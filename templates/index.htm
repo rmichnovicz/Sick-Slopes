@@ -97,6 +97,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       var stoplights;
       // Settings chosen from map
       var useStoplights;
+      var maxDiversions;
       // Results from JS mess
       var maxesAndPaths;
       var sortedMaxes;
@@ -105,7 +106,6 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
       var marker;
       var mapIteration;
       var mapVelocity;
-      var maxPaths;
       // var sortedMaxesAndPaths = [];
 
       function initAutocomplete() {
@@ -215,11 +215,14 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
         $("#send").click(function() {
           var rectBounds = rectangle.getBounds().toJSON();
           useStoplights = $("#stoplights").prop('checked');
-          var startSpeed = 1.0 //parseFloat($("#startSpeed").val());
+          var startSpeed = parseFloat($("#startSpeed").val());
           if (startSpeed == NaN) {
             startSpeed = 1.0;
           }
-          maxPaths = 2; //parseInt($("maxPaths").val())
+          maxDiversions = parseInt($("#diversions").val())
+          if (maxDiversions == NaN) {
+            maxDiversions = 2;
+          }
           var findPaths = generateFindPaths()
           $("#send").prop('disabled', true);
           $("#status").html("Getting Map...");
@@ -231,6 +234,13 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
             url: '/send_square/',
             success: function(inputData) {
               data = inputData;
+              if (data == false) {
+                $("#status").html("Request Rejected from OpenStreetMap API. "
+                  + "Consider donating so maybe one day I might have enough "
+                  + "money to locally host a US or world map on my own server.");
+                $("#send").prop('disabled', false);
+                return;
+              }
               console.log(data);
               graph = data["graph"];
               stoplights = data["stoplights"]
@@ -302,7 +312,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
               $("#status").html(
                 "Server Error " + textStatus + " " + errorThrown
                 );
-              $("#send").prop("disabled", false)
+              $("#send").prop("disabled", false);
             }
           });
           return false; //recommended by tutsplus for some reason
@@ -394,7 +404,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
           // neighbors.sort(sortBySlopeReversed(start, a, b)) // TODO enable
           for(
             var i = 0, len = neighbors.length, found = 0;
-            found < maxPaths && i < len;
+            found < maxDiversions && i < len;
             i++) {
             var neighbor = neighbors[i];
             if (path.indexOf(neighbor) == -1) {
@@ -425,7 +435,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
             // neighbors.sort(sortBySlope(start, a, b)) // TODO enable // DF reverse
             for(
               var i = 0, len = neighbors.length, found = 0;
-              found < maxPaths && i < len;
+              found < maxDiversions && i < len;
               i++)
             {
               var neighbor = neighbors[i];
@@ -472,7 +482,7 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
             // neighbors.sort(sortBySlopeReversed(start, a, b)) // TODO enable
             for(
               var i = 0, len = neighbors.length, found = 0;
-              found < maxPaths && i < len;
+              found < maxDiversions && i < len;
               i++)
             {
               var neighbor = neighbors[i];
@@ -626,15 +636,17 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
   <body>
     <button id="send">Send the shit!</button><br>
     <input type="checkbox" id="stoplights">Stop at Stoplights<br>
-    Starting speed, meters per second:
-    <input type="text" id="startSpeed" value="1" style="width: 5em;"><br>
+    <input type="text" id="startSpeed" value="1" style="width: 2em;">
+    Starting speed, meters per second<br>
     <input type="checkbox" id="hide-rectangle">Hide rectangle on map<br>
-    Search method:
     <select id="search-method">
       <option value="recursive">Recursive Depth-First</option>
       <option value="depth-first">Iterative Depth-First</option>
       <option value="breadth-first">Iterative Breadth-First</option>
     </select>
+    Search method<br>
+    <input type="text" id="diversions" value="2" style="width: 2em;">
+    Maximum diversions per intersection<br>
     <input id="pac-input" class="controls" type="text" placeholder="Search Box">
     <div id="map-container">
       <div id="map"></div>
