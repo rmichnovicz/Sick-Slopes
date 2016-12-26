@@ -10,4 +10,4 @@ map*.dat
 */map*.dat
 map.osm
 *.py~
-queryresults/*
+(*.dat
