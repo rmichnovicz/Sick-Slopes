@@ -11,3 +11,4 @@ map*.dat
 map.osm
 *.py~
 (*.dat
+*.pyc

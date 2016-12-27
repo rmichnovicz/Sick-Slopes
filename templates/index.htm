@@ -180,7 +180,9 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
             }
           });
           map.fitBounds(bounds);
-          rectangle.setBounds(bounds)
+          rectangle.setBounds(bounds);
+          rectangle.setMap(map);
+          $("#hide-rectangle").prop('checked', false)
         });
         var originalRectBounds = {
           north: 33.7874,

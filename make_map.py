@@ -23,7 +23,7 @@ def get_elevations_by_coords(lats, lngs):
 
     elevations = []
     for fname in queries.keys():
-        database_path = fname + '_13/w001001.adf'
+        database_path = 'elevationdata/' + fname + '_13/w001001.adf'
 
         proc = subprocess.Popen(
             ['gdallocationinfo', database_path, '-valonly', '-geoloc'],

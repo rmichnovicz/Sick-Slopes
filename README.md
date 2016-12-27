@@ -12,21 +12,21 @@ Instructions are written for Ubuntu Linux, but I imagine they should work on oth
     sudo apt-get install gdal-bin
     sudo apt install python3-pip
     pip3 install --upgrade pip
-    pip3 install osmapi numpy scipy matplotlib ipython jupyter pandas sympy nose
+    pip3 install osmapi wget numpy scipy matplotlib ipython jupyter pandas sympy nose
 
 I don't know if you need the stuff after numpy, it was just on their website.
 
 **Download Map Data**
 
-Change the numbers in the file name to the ceiling of the coordinates you need (eg. N 33.7 W 84.4 -> n34w085)
+The command is followed by the latitude and longitude of the coordinate area you
+need to download. It downloads a 1 degree by 1 degree block of coordinate data
+at the resolution of 1/3 by 1/3 arc-seconds. The block is named by the northwest
+corner of the coordinates. The default area selected upon opening index.htm is
+contained in the N 34 W 85 block. The following commands are equivilent.
 
-    wget https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/ArcGrid/n34w085.zip
-    unzip n34w085.zip -d n34w085
-    rm n34w085.zip
-
-**Set up program**
-
-    mkdir maps
+    python3 download_elevation_data.py 34 85
+    python3 download_elevation_data.py 34 -085
+    python3 download_elevation_data.py 33.4543423 84.32465878
 
 How It works
 ------------
