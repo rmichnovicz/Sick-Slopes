@@ -1,6 +1,6 @@
 **Sick Slopes!**
 ============
-Sick Slopes is a web app for finding the routes in an area to achieve the highest possible velocity without powered acceleration, such as in longboarding, skateboarding, or biking. This app was designed in mind the goal of with finding the sickest slopes for longboarding. Currently, this app supports the continental United States.
+Sick Slopes is a web app for finding routes to reach high velocities in unpowered vehicles such as longboards or bikes. Currently, this app supports the continental United States.
 
 Quick Start for Locally Hosting
 -------------------------------

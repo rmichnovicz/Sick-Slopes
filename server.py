@@ -64,6 +64,14 @@ def get_json():
 def get_favicon():
     return send_file('favicon.ico')
 
+@app.route("/findhills.js")
+def get_js():
+    return send_file('findhills.js')
+
+@app.route("/style.css")
+def get_css():
+    return send_file('style.css')
+
 # Run the app :)
 if __name__ == '__main__':
   app.run(
