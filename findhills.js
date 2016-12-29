@@ -15,10 +15,14 @@ var origins;
 var results;
 var edgeHeights;
 var nodeLatLongs;
+var nodeHeights;
 var stoplights;
+var stoplightsDict;
 // Settings chosen from map
 var useStoplights;
 var maxDiversions;
+var maxPathsPerOrigin;
+var useAStar;
 // Results from JS mess
 var maxesAndPaths;
 var sortedMaxes;
@@ -33,7 +37,6 @@ window.location.search
     params[key] = value;
   }
 );
-// I fuckin love one liners
 // var sortedMaxesAndPaths = [];
 
 function initAutocomplete() {
@@ -157,8 +160,6 @@ function initAutocomplete() {
 }
 
 $(document).ready(function() {
-
-
   $("#send").click(function() {
     var rectBounds = rectangle.getBounds().toJSON();
     useStoplights = $("#stoplights").prop('checked');
@@ -166,9 +167,18 @@ $(document).ready(function() {
     if (startSpeed == NaN) {
       startSpeed = 1.0;
     }
-    maxDiversions = parseInt($("#diversions").val())
+    maxPathsPerOrigin = parseInt($("#max-routes").val());
+    if (maxPathsPerOrigin == NaN) {
+      maxPathsPerOrigin = 1000; //9007199254740991 == 2^53 - 1 is more fun lol
+    }
+    maxDiversions = parseInt($("#diversions").val());
     if (maxDiversions == NaN) {
       maxDiversions = 2;
+    }
+    if ($("#sorting-method").val() == "a-star") {
+      useAStar = true;
+    } else {
+      useAStar = false;
     }
     var findPaths = generateFindPaths()
     $("#send").prop('disabled', true);
@@ -193,9 +203,14 @@ $(document).ready(function() {
         graph = data["graph"];
         stoplights = data["stoplights"]
         nodeLatLongs = data["node_latlons"];
+        nodeHeights = data["node_heights"];
         edgeHeights = data["edge_heights"];
         $("#status").html("Got map! Finding routes...");
         $("#send").prop('disabled', false);
+        stoplightsDict = {};
+        for (i = 0, len = stoplights.length; i < len; i++) {
+          stoplightsDict[stoplights[i]] = true;
+        }
         origins = (useStoplights ? data["local_maxima"].
           concat(data["stoplights"]) : data["local_maxima"]);
         var paths = [];
@@ -231,7 +246,7 @@ $(document).ready(function() {
         sortedMaxes = Object.keys(maxesAndPaths).sort(function (a, b) {
           return (parseFloat(b) - parseFloat(a));
         }) // TODO change b to nodeHeights(b)
-        console.log(sortedMaxes);
+        // console.log(sortedMaxes);
         var resultContent = "";
         for (var i = 0, len = sortedMaxes.length; i < len; i++) {
           resultContent += "<h3>" + sortedMaxes[i] + "m/s </h3>"
@@ -360,7 +375,12 @@ function generateFindPaths() {
     var paths = []
     var maxVels = []
     var neighbors = graph[start];
-    // neighbors.sort(sortBySlopeReversed(start, a, b)) // TODO enable
+    sortBySlope = generateSortBySlope(start);
+    if (useAStar && neighbors.length > maxDiversions) {
+      neighbors.sort(function (a, b) {
+        return sortBySlope(a, b);
+      })
+    }
     for(
       var i = 0, len = neighbors.length, found = 0;
       found < maxDiversions && i < len;
@@ -386,13 +406,23 @@ function generateFindPaths() {
     var maxVels = [maxVel]
     var vels = [vel]
     while (pathsToExtend.length != 0) {
+      if (pathsToReturn.length >= maxPathsPerOrigin) {
+        break;
+      }
       var pathToExtend = pathsToExtend.shift(); // Remove & return arr[0]
       var pathsMaxVel = maxVels.shift(); // all are pop in df
       var pathsVel = vels.shift();
       var start = pathToExtend[pathToExtend.length - 1];
       var neighbors = graph[start];
-      // neighbors.sort(sortBySlope(start, a, b)) // TODO enable // DF reverse
-      for(
+      sortBySlope = generateSortBySlope(start);
+      if (useAStar && neighbors.length > maxDiversions) {
+        neighbors.sort(function (a, b) {
+          return sortBySlope(a, b);
+        })
+      // TODO translate this pseudocode:
+      // neighbors = neighbors[0:maxDiversions].reverse();
+      }
+      for (
         var i = 0, len = neighbors.length, found = 0;
         found < maxDiversions && i < len;
         i++)
@@ -433,13 +463,23 @@ function generateFindPaths() {
     var maxVels = [maxVel]
     var vels = [vel]
     while (pathsToExtend.length != 0) {
+      if (pathsToReturn.length >= maxPathsPerOrigin) {
+        break;
+      }
       var pathToExtend = pathsToExtend.pop();
       var pathsMaxVel = maxVels.pop();
       var pathsVel = vels.pop();
       var start = pathToExtend[pathToExtend.length - 1];
       var neighbors = graph[start];
-      // neighbors.sort(sortBySlopeReversed(start, a, b)) // TODO enable
-      for(
+      sortBySlope = generateSortBySlope(start);
+      if (useAStar && neighbors.length > maxDiversions) {
+        neighbors.sort(function (a, b) {
+          return sortBySlope(a, b);
+        })
+      // TODO translate this pseudocode:
+      // neighbors = neighbors[0:maxDiversions].reverse();
+      }
+      for (
         var i = 0, len = neighbors.length, found = 0;
         found < maxDiversions && i < len;
         i++)
@@ -485,12 +525,28 @@ function generateFindPaths() {
   }
   return findPathsBreadthFirst; // should never run
 }
-function sortBySlope(start, a, b) {
-  // TODO
+function generateSortBySlope (start) {
+  function sortBySlope(a, b) {
+    // We want the most downward slopes to be first
+    return (
+      (nodeHeights[a] - nodeHeights[start])
+      / latLng2Dist(
+        nodeLatLongs[start][0],
+        nodeLatLongs[start][1],
+        nodeLatLongs[a][0],
+        nodeLatLongs[a][1]
+        )
+      - (nodeHeights[b] - nodeHeights[start])
+      / latLng2Dist(
+        nodeLatLongs[start][0],
+        nodeLatLongs[start][1],
+        nodeLatLongs[b][0],
+        nodeLatLongs[b][1]
+        ) ); // TODO check
+  }
+  return sortBySlope
 }
-function sortBySlopeReversed(start, a, b) {
-  return b - a; // TODO
-}
+
 function rideDownNode(src, dest, vel, maxVel) {
   if (vel > maxVel) {
     maxVel = vel;

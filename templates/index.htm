@@ -30,15 +30,24 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     <input type="checkbox" id="stoplights">Stop at Stoplights<br>
     <input type="text" id="startSpeed" value="1" style="width: 2em;">
     Starting speed, meters per second<br>
-    <input type="checkbox" id="hide-rectangle">Hide rectangle on map<br>
     <select id="search-method">
-      <option value="recursive">Recursive Depth-First</option>
       <option value="depth-first">Iterative Depth-First</option>
       <option value="breadth-first">Iterative Breadth-First</option>
+      <option value="recursive">Recursive Depth-First (crash prone)</option>
     </select>
-    Search method<br>
+    Search method
+    <br>
+    <select id="sorting-method">
+      <option value="a-star">Most downward first</option>
+      <option value="none">Random (faster)</option>
+    </select>
+    Sorting method for choosing diversions
+    <br>
     <input type="text" id="diversions" value="2" style="width: 2em;">
     Maximum diversions per intersection<br>
+    <input type="text" id="max-routes" value="1000" style="width: 4em;">
+    Maximum routes per origin (only iterative search methods)<br>
+    <input type="checkbox" id="hide-rectangle">Hide rectangle on map<br>
     <input id="pac-input" class="controls" type="text" placeholder="Search Box">
     <div id="map-container">
       <div id="map"></div>
