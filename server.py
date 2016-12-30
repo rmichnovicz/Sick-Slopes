@@ -4,8 +4,11 @@
 from flask import Flask, render_template, request, url_for, jsonify, send_file
 from multiprocessing import Process
 from make_map import make_map
+import countries
 
 app = Flask(__name__)
+country_checker = countries.CountryChecker("TM_WORLD_BORDERS-0.3.shx")
+
 # from hill_finder import find_hills
 # dummy method: TODO remove
 def find_hills(west, south, east, north):
@@ -19,13 +22,19 @@ def show_home():
 @app.route('/send_square/', methods=['POST'])
 def respond():
     data = request.get_json(force=True)
+    country = str(country_checker.getCountry(countries.Point(
+        (data['north'] + data['south']) / 2 ,
+        (data['east'] + data['west']) / 2
+        )))
+    # if country == None:
+    #     country = 'United States' # Might cause or prevent bugs
     success, stoplights, local_maxima, graph, node_heights, node_latlons, \
         edge_heights = make_map((
             data['west'],
             data['south'],
             data['east'],
             data['north']
-            ))
+            ), country)
     if (success):
         return jsonify({
             "stoplights": stoplights,

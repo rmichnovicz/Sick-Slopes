@@ -6,7 +6,7 @@ import pickle
 from numpy import linspace
 import acceleration
 
-def get_elevations_by_coords(lats, lngs):
+def get_elevations_by_coords(lats, lngs, country):
     queries = dict()
     for lat, lng in zip(lats, lngs):
         fname = ('grd' + ('n' if lat>0 else 's')
@@ -23,8 +23,10 @@ def get_elevations_by_coords(lats, lngs):
 
     elevations = []
     for fname in queries.keys():
-        database_path = 'elevationdata/' + fname + '_13/w001001.adf'
-
+        if country == 'United States' or country == None:
+            database_path = 'elevationdata/' + fname + '_13/w001001.adf'
+        if country == 'Mexico' or country == 'Canada':
+            database_path = 'elevationdata/' + fname + '_1/w001001.adf'
         proc = subprocess.Popen(
             ['gdallocationinfo', database_path, '-valonly', '-geoloc'],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -42,8 +44,9 @@ def get_node_entries(target_nodes, map_data):
         if item["data"]["id"] in target_nodes:
             yield (item["data"]["id"], item)
 
-def make_map(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
-                        # (west, south, east, north)
+def make_map(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874),
+    country = 'United States'):
+                        # (west, south, east, north), string
 
     api_link = osmapi.OsmApi(#username='evanxq1@gmail.com',
                              #password='hrVQ*DO9aD9q'#,
@@ -72,7 +75,7 @@ def make_map(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
             map_data = api_link.Map(mapsize[0], mapsize[1],
                                     mapsize[2], mapsize[3])
             with open(mapfilepath, 'wb') as f:
-                pickle.dump(map_data, f)
+                pickle.dump(map_data, f) # TODO delete this entire try block tbh
 
     except IOError as e:
         print("Couldn't write map data!", e.errorno, e.strerror)
@@ -109,7 +112,7 @@ def make_map(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
     node_iter = (x[0] for x in latlons_items)
     lat_iter = (x[1][0] for x in latlons_items)
     lon_iter = (x[1][1] for x in latlons_items)
-    elevations = get_elevations_by_coords(lat_iter, lon_iter)
+    elevations = get_elevations_by_coords(lat_iter, lon_iter, country)
     for node, elev in zip(node_iter, elevations):
         node_heights[node] = elev
 
@@ -137,7 +140,7 @@ def make_map(mapsize = (-84.4203, 33.7677, -84.3812, 33.7874)):
         superquery_keys += [(src,dst)] * n_steps
 
     print("Found %d. Scanning them..." % len(superquery_keys))
-    elevations = get_elevations_by_coords(superquery_lats, superquery_lons)
+    elevations = get_elevations_by_coords(superquery_lats, superquery_lons, country)
     for i in range(len(elevations)):
         item = elevations[i]
         if str(superquery_keys[i]) in edge_heights.keys():

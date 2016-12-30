@@ -10,6 +10,7 @@ Instructions are written for Ubuntu Linux, but I imagine they should work on oth
 
     sudo add-apt-repository ppa:ubuntugis/ppa && sudo apt-get update
     sudo apt-get install gdal-bin
+    sudo apt-get install python3-gdal
     sudo apt install python3-pip
     pip3 install --upgrade pip
     pip3 install osmapi wget numpy scipy matplotlib ipython jupyter pandas sympy nose
