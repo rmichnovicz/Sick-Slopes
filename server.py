@@ -8,10 +8,11 @@ import countries
 # TODO Remove the following in production
 from scan_product_links import urls
 import os
-from math import ceil
+import math
 import wget
 import urllib
 import zipfile
+import sys
 
 app = Flask(__name__)
 country_checker = countries.CountryChecker("TM_WORLD_BORDERS-0.3.shx")
@@ -34,33 +35,46 @@ def respond():
         (data['north'] + data['south']) / 2 ,
         (data['east'] + data['west']) / 2
         )))
-    print (data['east'], data['west'])
 
     # TODO Remove the following block of code in production
-    # if country == 'United States':
-    #     path_suffix = '_13'
-    #     useful_urls = us_urls
-    # else:
-    #     path_suffix = '_1'
-    #     useful_urls = mx_ca_urls
-    # for lat in range(
-    #     ceil(float(data['south'])), ceil(float(data['north'])) + 1
-    #     # Eg N 87.7 to N 86.
-    #     ):
-    #     for lng in range(
-    #         ceil(float(data['west'])), ceil(float(data['east'])) + 1
-    #         ):
-    #         fname = ('grd' + ('n' if lat>0 else 's')
-    #             + str(math.ceil(abs(lat))).zfill(2)
-    #             + ('e' if lng>0 else 'w')
-    #             + str(math.ceil(abs(lng))).zfill(3))
-    #         database_path = ('elevationdata/'
-    #             + fname
-    #             + path_suffix + '/w001001.adf'
-    #             )
-    #         if not os.path.exists(database_path):
-    #             try:
-    #                 wget.download(useful_urls[(lat, lng)])
+    if country == 'United States':
+        path_suffix = '_13'
+        useful_urls = us_urls
+    else:
+        path_suffix = '_1'
+        useful_urls = mx_ca_urls
+    for lat in range(
+        math.ceil(float(data['south'])), math.ceil(float(data['north'])) + 1
+        # Eg N 87.7 to N 86.
+        ):
+        for lng in range(
+            math.floor(float(data['west'])), math.floor(float(data['east'])) + 1
+            ):
+            fname = ('grd' + ('n' if lat>0 else 's')
+                + str(abs(math.ceil(lat))).zfill(2)
+                + ('e' if lng>=0 else 'w')
+                + str(abs(math.floor(lng))).zfill(3))
+            database_path = ('elevationdata/'
+                + fname
+                + path_suffix + '/w001001.adf'
+                )
+            if not os.path.exists(database_path):
+                try:
+                    print("downloading" + useful_urls[(lat, lng)] + "\n")
+                    wget.download(useful_urls[(lat, lng)])
+                    print("\n")
+                    file_name = useful_urls[(lat, lng)].split('/')[-1]
+                    archive = zipfile.ZipFile(file_name)
+                    for file in archive.namelist():
+                        if file.startswith("grd" + fname[3:] + path_suffix + "/"):
+                            archive.extract(file, "elevationdata")
+                    os.remove(file_name)
+                except (urllib.error.HTTPError):
+                    print("Could not download data for", (lat, lng))
+                except KeyError:
+                    print("Thing not found in urls: " (lat, lng))
+                # except:
+                #     print(sys.exc_info()[0], (lat, lng))
 
 
 

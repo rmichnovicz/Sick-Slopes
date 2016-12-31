@@ -11,7 +11,7 @@ def get_elevations_by_coords(lats, lngs, country):
     for lat, lng in zip(lats, lngs):
         fname = ('grd' + ('n' if lat>0 else 's')
                  + str(abs(math.ceil(lat))).zfill(2)
-                 + ('e' if lng>0 else 'w')
+                 + ('e' if lng>=0 else 'w') # lng = 0 block is all east I guess
                  + str(abs(math.floor(lng))).zfill(3)
                  )
 
