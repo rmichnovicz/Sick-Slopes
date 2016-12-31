@@ -16,7 +16,7 @@ def urls(file):
                 ns = 1 if coords[0] == 'n' else -1
                 ew = 1 if coords[3] == 'e' else -1
                 urls[ns * (int(coords[1:3]), ew * int(coords[4:]))] = row[7]
-                print(ns * (int(coords[1:3]), ew * int(coords[4:])), ": ", row[7])
+                # print(ns * (int(coords[1:3]), ew * int(coords[4:])), ": ", row[7])
     return urls
 # if __name__ == "__main__":
 #     with open("us_urls.pickle", "wb") as file:

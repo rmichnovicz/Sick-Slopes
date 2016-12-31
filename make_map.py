@@ -10,9 +10,9 @@ def get_elevations_by_coords(lats, lngs, country):
     queries = dict()
     for lat, lng in zip(lats, lngs):
         fname = ('grd' + ('n' if lat>0 else 's')
-                 + str(math.ceil(abs(lat))).zfill(2)
+                 + str(abs(math.ceil(lat))).zfill(2)
                  + ('e' if lng>0 else 'w')
-                 + str(math.ceil(abs(lng))).zfill(3)
+                 + str(abs(math.floor(lng))).zfill(3)
                  )
 
         s = str(lng) + ' ' + str(lat) + '\n'
@@ -23,9 +23,10 @@ def get_elevations_by_coords(lats, lngs, country):
 
     elevations = []
     for fname in queries.keys():
-        if country == 'United States' or country == None:
+        if country == 'United States': # TODO deal with AK
             database_path = 'elevationdata/' + fname + '_13/w001001.adf'
-        if country == 'Mexico' or country == 'Canada':
+        if country == 'Mexico' or country == 'Canada' or country == None:
+            # TODO deal with country == None which would be sorta wierd
             database_path = 'elevationdata/' + fname + '_1/w001001.adf'
         proc = subprocess.Popen(
             ['gdallocationinfo', database_path, '-valonly', '-geoloc'],

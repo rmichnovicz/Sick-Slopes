@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# from https://github.com/che0/countries
 
 from osgeo import ogr
 

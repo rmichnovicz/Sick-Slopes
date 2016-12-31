@@ -1,4 +1,2 @@
-import countries
-
-checker = countries.CountryChecker("TM_WORLD_BORDERS-0.3.shx")
-print(checker.getCountry(countries.Point(20.0, -100.0)))
+import os
+print(os.path.isdir("elevationdata/grdn34w085_13"))
