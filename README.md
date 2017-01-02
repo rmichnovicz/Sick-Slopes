@@ -17,6 +17,10 @@ Instructions are written for Ubuntu Linux, but I imagine they should work on oth
 
 I don't know if you need the stuff after numpy, it was just on their website.
 
+**Run It**
+
+    sudo python3 server.py
+
 
 How It works
 ------------
