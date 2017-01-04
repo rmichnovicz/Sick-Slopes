@@ -23,6 +23,7 @@ var useStoplights;
 var maxDiversions;
 var maxPathsPerOrigin;
 var useAStar;
+var startSpeed;
 // Results from JS mess
 var maxesAndPaths;
 var sortedMaxes;
@@ -34,9 +35,13 @@ var mapVelocity;
 var params={};
 window.location.search
   .replace(/[?&]+([^=&]+)=([^&]*)/gi, function(str,key,value) {
-    params[key] = value;
+    params[key] = value; // Gets each key and value in URL
   }
 );
+// Chart stuff
+google.charts.load('current', {'packages':['line', 'corechart']});
+var chart;
+google.charts.setOnLoadCallback(makeChart);
 // var sortedMaxesAndPaths = [];
 
 function initAutocomplete() {
@@ -163,7 +168,7 @@ $(document).ready(function() {
   $("#send").click(function() {
     var rectBounds = rectangle.getBounds().toJSON();
     useStoplights = $("#stoplights").prop('checked');
-    var startSpeed = parseFloat($("#startSpeed").val());
+    startSpeed = parseFloat($("#startSpeed").val());
     if (startSpeed == NaN) {
       startSpeed = 1.0;
     }
@@ -262,8 +267,7 @@ $(document).ready(function() {
         $("#result-container").html(resultContent);
         mapIteration = 0; // Index 0
         mapVelocity = sortedMaxes[0]; // Show fastest path first
-        showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
-        updateButtons();
+        updatePath();
         $("#hide-rectangle").prop('checked', true);
         rectangle.setMap(null);
         $("#status").html("Found routes.");
@@ -280,14 +284,13 @@ $(document).ready(function() {
     });
     return false; //recommended by tutsplus for some reason
     // https://code.tutsplus.com/tutorials/10-ways-to-instantly-increase-your-jquery-performance--net-5551
-    //console.log(rectBounds);
+    // console.log(rectBounds);
   });
   $("#result-container").on("click", ".path", function() {
-    var path = maxesAndPaths[$(this).data("max")][$(this).data("iteration")];
-    showPath(path, $(this).data("max"));
+    // var path = maxesAndPaths[$(this).data("max")][$(this).data("iteration")];
     mapIteration = $(this).data("iteration");
     mapVelocity = $(this).data("max");
-    updateButtons();
+    updatePath();
   });
 
   $("#hide-rectangle").change(function() {
@@ -306,24 +309,20 @@ $(document).ready(function() {
   $("#skip-back").click(function() {
     mapIteration = 0;
     mapVelocity = sortedMaxes[sortedMaxes.indexOf(mapVelocity) - 1]
-    showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
-    updateButtons();
+    updatePath();
   });
   $("#back").click(function() {
     mapIteration -= 1;
-    showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
-    updateButtons();
+    updatePath();
   });
   $("#forward").click(function() {
     mapIteration += 1;
-    showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
-    updateButtons();
+    updatePath();
   });
   $("#skip-forward").click(function() {
     mapIteration = 0;
     mapVelocity = sortedMaxes[sortedMaxes.indexOf(mapVelocity) + 1]
-    showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
-    updateButtons();
+    updatePath();
   });
   $("#share-box").focus(function(){
     $(this).one('mouseup', function(event){
@@ -336,7 +335,7 @@ $(document).ready(function() {
     document.execCommand('copy');
   });
 });
-function updateButtons() {
+function updatePath() {
   if (mapVelocity == sortedMaxes[0]) {
     $("#skip-back").prop('disabled', true);
   } else {
@@ -358,6 +357,9 @@ function updateButtons() {
   } else {
     $("#skip-forward").prop('disabled', false);
   }
+  showPath(maxesAndPaths[mapVelocity][mapIteration], mapVelocity);
+  drawChart(maxesAndPaths[mapVelocity][mapIteration]);
+
 
 }
 function generateFindPaths() {
@@ -557,8 +559,8 @@ function rideDownNode(src, dest, vel, maxVel) {
     nodeLatLongs[dest][0],
     nodeLatLongs[dest][1]
     );
-  var dist = distInternode / edgeHeights["(" + src + ", " + dest + ")"].length;
   var edge = edgeHeights["(" + src + ", " + dest + ")"];
+  var dist = distInternode / (edge.length - 1); // TODO check logic of - 1
   for (var i = 1, len = edge.length; i < len; i++) {
     var dh = edge[i] - edge[i - 1];
     vel = newVelocity(vel, dh, dist);
@@ -641,4 +643,82 @@ function showPath(path, maxVel) {
     lat: nodeLatLongs[path[0]][0],
     lng: nodeLatLongs[path[0]][1]
   });
+}
+
+// Based on https://google-developers.appspot.com/chart/interactive/docs/gallery/linechart
+
+function makeChart() {
+  var chartDiv = document.getElementById('chart_div');
+  chart = new google.charts.Line(chartDiv);
+}
+
+function drawChart(path) {
+
+  var pathLength = 0;
+  var vel = startSpeed;
+  var rows = [[pathLength, nodeHeights[path[0]], vel]];
+  var src;
+  var dest;
+  var distInternode;
+  var edge;
+  var dist;
+  var currentLat;
+  var currentLng;
+  var dLat;
+  var dLng;
+  var dh;
+  for (var i = 0, len = path.length - 1; i < len; i++) {
+    src = path[i];
+    dest = path[i + 1];
+    distInternode = latLng2Dist(
+      nodeLatLongs[src][0],
+      nodeLatLongs[src][1],
+      nodeLatLongs[dest][0],
+      nodeLatLongs[dest][1]
+      );
+    edge = edgeHeights["(" + src + ", " + dest + ")"];
+    dist = distInternode / (edge.length - 1);
+    currentLat = nodeLatLongs[src][0];
+    currentLng = nodeLatLongs[src][1];
+    dLat = (nodeLatLongs[dest][0] - nodeLatLongs[src][0]) / (edge.length - 1)
+    dLng = (nodeLatLongs[dest][1] - nodeLatLongs[src][1]) / (edge.length - 1)
+    for (var j = 0, len2 = edge.length - 1; j < len2; j++) {
+      dh = edge[j + 1] - edge[j];
+      vel = newVelocity(vel, dh, dist);
+      pathLength += dist;
+      rows.push([pathLength, edge[j + 1], vel]);
+      if (vel == 0) {
+        break;
+      }
+    }
+  }
+
+  var data = new google.visualization.DataTable();
+  data.addColumn('number', 'Land Traversed (m)');
+  data.addColumn('number', "Elevation");
+  data.addColumn('number', "Speed");
+  data.addRows(rows); // Format: [[traversed, elevation, speed], [t, e, s]]
+
+  var options = {
+    chart: {
+      title: 'Speed and elevation vs location'
+    },
+    width: 900,
+    height: 250,
+    series: {
+      // Gives each series an axis name that matches the Y-axis below.
+      0: {axis: 'Elevation'},
+      1: {axis: 'Speed'}
+    },
+    axes: {
+      // Adds labels to each axis; they don't have to match the axis names.
+      y: {
+        Elevation: {label: 'Elevation (meters)'},
+        Speed: {label: 'Speed (meters/second)'}
+      }
+    }
+  };
+
+  chart.draw(data, options);
+
 }
