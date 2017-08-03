@@ -11,6 +11,9 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     <link rel="shortcut icon" href="favicon.ico">
     <title>Sick Slopes!</title>
     <style>
+      button:disabled {
+        color: gray;
+      }
     </style>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
@@ -48,6 +51,8 @@ https://developers.google.com/maps/documentation/javascript/examples/rectangle-e
     Maximum diversions per intersection<br>
     <input type="text" id="max-routes" value="1000" style="width: 4em;">
     Maximum routes per origin (only iterative search methods)<br>
+    <input type="text" id="friction-coefficient" value=".04" style="width: 4em;">
+    Coefficient of Friction<br>
     <input type="checkbox" id="hide-rectangle">Hide rectangle on map<br>
     <input id="pac-input" class="controls" type="text" placeholder="Search Box">
     <div id="map-container">

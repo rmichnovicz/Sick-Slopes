@@ -24,6 +24,7 @@ var maxDiversions;
 var maxPathsPerOrigin;
 var useAStar;
 var startSpeed;
+var frictC // Coefficient of friction
 // Results from JS mess
 var maxesAndPaths;
 var sortedMaxes;
@@ -184,6 +185,10 @@ $(document).ready(function() {
       useAStar = true;
     } else {
       useAStar = false;
+    }
+    frictC = parseFloat($("#friction-coefficient").val());
+    if (frictC == NaN) {
+      frictC = .04;
     }
     var findPaths = generateFindPaths()
     $("#send").prop('disabled', true);
@@ -601,7 +606,6 @@ var g = -9.81 // accelertion due to gravity, m/s
 var dragC = .6 // drag coefficient of human body
 var crossA = .68 // Cross-sectional area of human body
 var mass = 80 // kg
-var frictC = .03 // Coefficient of friction
 
 function newVelocity(v0, dh, dist) {
   if (v0 == 0) {
@@ -609,9 +613,9 @@ function newVelocity(v0, dh, dist) {
   }
   var theta = Math.atan2(dh, dist);
   var a = (
-    g * Math.sin(theta)
-    - (1.225 * dragC * crossA * v0 * v0) / (2 * mass)
-    + (g * frictC * Math.cos(theta))
+    g * Math.sin(theta) // Accelleration due to gravity
+    - (1.225 * dragC * crossA * v0 * v0) / (2 * mass) // 1.225 is mass density of air, rest is drag formula
+    + (g * frictC * Math.cos(theta)) //
     );
   // Total Acceleration = grav, air resistance, rolling friction resistance
   // Assumes final velocity causes about the amount of air resistance as
