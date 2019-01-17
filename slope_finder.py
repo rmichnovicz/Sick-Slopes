@@ -14,11 +14,13 @@ import pylab as pl
 from matplotlib import collections  as mc
 from heapq import heappush, heappop
 import overpy
+import json
 
 class Node:
-    def __init__(self, node_id, lat, lng, is_stoplight, adj,
+    def __init__(self, node_id, index, lat, lng, is_stoplight, adj,
                  init_energy, init_speed):
         self.node_id = node_id
+        self.index = index
         self.lat = lat
         self.lng = lng
         self.is_stoplight = is_stoplight
@@ -161,10 +163,11 @@ def create_node_list_with_elevations(adj_list, id_to_nodes, data):
     stoplights = set()
     init_energy = .5 *data['mass'] * data['init_speed'] ** 2
     init_speed = data['init_speed']
-    for node_id in adj_list.keys():
+    for i, node_id in enumerate(adj_list.keys()):
         node = id_to_nodes[node_id]
         nodes[node_id] = Node(
             node_id,
+            i,
             lat=float(node.lat), 
             lng=float(node.lon),
             is_stoplight = 
@@ -500,6 +503,18 @@ def ride_down_node(v0, elevations, locs, new_velocity_fn, integrations=1):
             break
     return v
 
+
+def ride_down_node_all_speeds(v0, elevations, locs, new_velocity_fn, integrations=1):
+    dist = latlong_dist(locs[0][0], locs[0][1], locs[1][0], locs[1][1])
+    v = [v0]
+    stopped = False
+    for i in range(len(elevations) - 1):
+        v.append(new_velocity_fn(v[-1], elevations[i+1] - elevations[i], dist, integrations))
+        if v[-1] == 0:
+            stopped = True
+    return v
+
+
 def test_node_starts(sorted_nodes):
     for node in sorted_nodes:
         if node.path_start == node:
@@ -508,10 +523,20 @@ def test_node_starts(sorted_nodes):
 
 def simulate_paths(sorted_nodes, data, new_velocity_fn):
     integrations = data['integrations']
-    for node in sorted_nodes:
-        if node.path_start == node:
-            stack = [node]
-            for i, adj in enumerate(node.next_nodes):
+    top_nodes = []
+    for top_node in sorted_nodes:
+        if top_node.path_start == top_node:
+            top_nodes.append(top_node)
+    for top_node in top_nodes:
+        stack = [top_node]
+        while stack:
+            node = stack.pop()
+            next_indices = []
+            for i, adj in enumerate(node.adj_node_ptrs):
+                if adj in node.next_nodes:
+                    next_indices.append(i)
+            for i in next_indices:
+                adj = node.adj_node_ptrs[i]
                 new_speed = ride_down_node(node.speed, 
                                            node.edge_elevations[i], 
                                            node.edge_coords[i],
@@ -520,8 +545,10 @@ def simulate_paths(sorted_nodes, data, new_velocity_fn):
                 if new_speed > adj.speed:
                     adj.speed = new_speed
                 else:
-                    adj.prev = None
+                    adj.prev_node = None
                     adj.path_start = adj
+                    node.next_nodes.remove(adj)
+                stack.append(adj)
 
 
 # Use a queue to decide which nodes to ride down
@@ -537,7 +564,6 @@ def algo_2_with_air(sorted_nodes, data, new_velocity_fn):
         if node not in need_to_explore:
             continue
         need_to_explore.remove(node)
-        node_energy = node.energy
         for i in range(len(node.adj)):
             adj = node.adj_node_ptrs[i]
             if node.speed > adj.speed or node.elevation > adj.elevation:
@@ -550,7 +576,11 @@ def algo_2_with_air(sorted_nodes, data, new_velocity_fn):
                 if new_speed > adj.speed:
                     adj.speed = new_speed
                     if adj.prev_node is not None:
-                        adj.prev_node.next_nodes.remove(adj)
+                        try:
+                            adj.prev_node.next_nodes.remove(adj)
+                        except:
+                            print(adj.prev_node.next_nodes)
+                            return
                     adj.prev_node = node
                     node.next_nodes.add(adj)
                     adj.path_start = node.path_start
@@ -559,6 +589,34 @@ def algo_2_with_air(sorted_nodes, data, new_velocity_fn):
                     q.append(adj)
                     edges_updated += 1
     return edges_updated, edges_ridden
+
+def add_detailed_edge_speeds(sorted_nodes, data, new_velocity_fn):
+    integrations = data['integrations']   
+    top_nodes = []
+    for top_node in sorted_nodes:
+        if top_node.path_start == top_node:
+            top_nodes.append(top_node)
+    for top_node in top_nodes:
+        stack = [top_node]
+        while stack:
+            node = stack.pop()
+            # new variables
+            next_indices = []
+            node.edge_speeds = [None] * len(node.adj)
+            for i, adj in enumerate(node.adj_node_ptrs):
+                if adj in node.next_nodes:
+                    next_indices.append(i)
+            for i in next_indices:
+                adj = node.adj_node_ptrs[i]
+                new_speeds = ride_down_node_all_speeds(
+                    node.speed, 
+                    node.edge_elevations[i], 
+                    node.edge_coords[i],
+                    new_velocity_fn,
+                    integrations)
+                node.edge_speeds[i] = new_speeds
+                stack.append(adj)
+
 
 def generate_perfect_graph(data):
     download_coords(data)
@@ -578,13 +636,68 @@ def generate_perfect_graph(data):
     sorted_nodes = sorted(nodes.values(), key=lambda n: -n.elevation)
     new_velocity_fn = generate_new_velocity_fn(data)
     find_work_all_edges(sorted_nodes, data)
+    # to_pickle(sorted_nodes, data, new_velocity_fn)
     # generate_compass()
+    algo_2(sorted_nodes)
+    # graph_paths(sorted_nodes)
+    simulate_paths(sorted_nodes, data, new_velocity_fn)
+    # for node in sorted_nodes:
+    #     for adj in node.adj_node_ptrs:
+    #         if adj not in node.adj_node_ptrs:
+    #             assert adj.prev_node != node
+    #         else:
+    #             assert adj.prev_node == node
+    # test_node_starts(sorted_nodes)
+    algo_2_with_air(sorted_nodes, data, new_velocity_fn)
+    return sorted_nodes
+
+# Doesn't work due to max recursion depth
+def to_pickle(sorted_nodes, data, new_velocity_fn):
+    import pickle
+    with open('saved.pkl', 'w') as f:
+        pickle.dump([sorted_nodes, data, new_velocity_fn], f)
+
+
+def start_from_pickle():
+    import pickle
+    with open('saved.pkl', 'r') as f:
+        loaded_data = pickle.load(f)
+    sorted_nodes, data, new_velocity_fn = loaded_data    
     algo_2(sorted_nodes)
     # graph_paths(sorted_nodes)
     simulate_paths(sorted_nodes, data, new_velocity_fn)
     # test_node_starts(sorted_nodes)
     algo_2_with_air(sorted_nodes, data, new_velocity_fn)
-    return sorted_nodes
+
+
+def to_json(sorted_nodes):
+    ret = dict()
+    for node in sorted_nodes:
+        cur = {
+            'index': node.index,
+            'lat': node.lat,
+            'lng': node.lng,
+            'speed': node.speed,
+            'prev': node.prev_node.index if node.prev_node else None,
+            'start': node.path_start.index,
+            'adj': [],
+            'edge_speeds': [],
+            'edge_elevations': [],
+            'edge_coords': [],
+        }
+        next_indices = []
+        node.edge_speeds = [None] * len(node.adj)
+        for i, adj in enumerate(node.adj_node_ptrs):
+            if adj in node.next_nodes:
+                next_indices.append(i)
+        for i in next_indices:
+            cur['adj'].append(node.adj_node_ptrs[i].index)
+            cur['edge_speeds'].append(node.edge_speeds[i])
+            cur['edge_elevations'].append(node.edge_elevations[i])
+            cur['edge_coords'].append(node.edge_coords[i])
+        ret[node.index] = cur
+    return json.dumps(ret)
+
 
 def generate_perfect_graph_timed(data):
     from time import time
@@ -643,26 +756,28 @@ def generate_perfect_graph_timed(data):
     algo_2_with_air(sorted_nodes, data, new_velocity_fn)
     t15 = time()
     print('algo_2_with_air', t15-t14)
-    print('total', t15-orig)
-    generate_compass()
-    graph_paths(sorted_nodes)
+    add_detailed_edge_speeds(sorted_nodes, data, new_velocity_fn)
+    t16 = time()
+    print('add_detailed_edge_speeds', t16-t15)
+    print('total', t16-orig)
+    # generate_compass()
+    # graph_paths(sorted_nodes)
     return sorted_nodes
 
-
 if __name__ == "__main__":
-    # data = {
-    #     'north': 33.7874, 
-    #     'west':  -84.4203, 
-    #     'south': 33.7677,
-    #     'east':  -84.3812, 
-    # }
-    # ABQ
     data = {
-        'north': 35.206225, 
-        'west':  -106.650861, 
-        'south': 35.059084,
-        'east':   -106.480712, 
+        'north': 33.7874, 
+        'west':  -84.4203, 
+        'south': 33.7677,
+        'east':  -84.3812, 
     }
+    # ABQ
+    # data = {
+    #     'north': 35.206225, 
+    #     'west':  -106.650861, 
+    #     'south': 35.059084,
+    #     'east':   -106.480712, 
+    # }
     data['allowed_highway_types'] = {'primary','primary_link', 'secondary','secondary_link',
                              'tertiary', 'tertiary_link', 'unclassified', 'residential',
                             'living_street', 'cycleway'}
@@ -698,5 +813,7 @@ if __name__ == "__main__":
     data['integrations'] = 1
     # test_nodes(sorted_nodes)
     # import cProfile
-    generate_perfect_graph_timed(data)
+    sorted_nodes = generate_perfect_graph_timed(data)
+    # start_from_pickle()
     # cProfile.run('generate_perfect_graph(data)')
+    to_json(sorted_nodes)
